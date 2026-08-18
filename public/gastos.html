@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gastos | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <nav class="nav">
+        <a href="index.html">Cuentas por Pagar</a>
+        <a href="gastos.html" class="active">Gastos</a>
+        <a href="usuarios.html" data-admin-only>Usuarios</a>
+      </nav>
+      <div class="user-box">
+        <span data-user-name></span>
+        <button type="button" id="logout-btn" class="secondary small">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2 id="form-title">Nuevo gasto</h2>
+      <form id="gasto-form">
+        <input type="hidden" id="gasto-id" />
+        <div class="grid">
+          <label>
+            Sucursal
+            <select id="sucursal" required></select>
+          </label>
+          <label>
+            Tipo de gasto
+            <select id="tipo_gasto" required></select>
+          </label>
+          <label>
+            Concepto
+            <input type="text" id="concepto" required />
+          </label>
+          <label>
+            Fecha
+            <input type="date" id="fecha" required />
+          </label>
+          <label>
+            Monto
+            <input type="number" id="monto" step="0.01" min="0" required />
+          </label>
+          <label>
+            Proveedor <span class="opcional">(opcional)</span>
+            <input type="text" id="proveedor" />
+          </label>
+          <label>
+            Numero de factura <span class="opcional">(opcional)</span>
+            <input type="text" id="numero_factura" />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="submit-btn">Guardar</button>
+          <button type="button" id="cancel-edit" class="secondary" hidden>Cancelar edicion</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Gastos registrados</h2>
+        <div class="toolbar-actions">
+          <select id="filtro-sucursal">
+            <option value="">Todas las sucursales</option>
+          </select>
+          <a href="/api/gastos/export/csv" class="button">Exportar CSV</a>
+          <a href="/api/gastos/export/xlsx" class="button">Exportar Excel</a>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table id="tabla-gastos">
+          <thead>
+            <tr>
+              <th>Sucursal</th>
+              <th>Tipo de gasto</th>
+              <th>Concepto</th>
+              <th>Fecha</th>
+              <th>Monto</th>
+              <th>Proveedor</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="gastos.js"></script>
+</body>
+</html>

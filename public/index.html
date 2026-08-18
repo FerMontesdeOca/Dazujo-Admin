@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cuentas por Pagar | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <nav class="nav">
+        <a href="index.html" class="active">Cuentas por Pagar</a>
+        <a href="gastos.html">Gastos</a>
+        <a href="usuarios.html" data-admin-only>Usuarios</a>
+      </nav>
+      <div class="user-box">
+        <span data-user-name></span>
+        <button type="button" id="logout-btn" class="secondary small">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2 id="form-title">Nueva cuenta por pagar</h2>
+      <form id="cuenta-form">
+        <input type="hidden" id="cuenta-id" />
+        <div class="grid">
+          <label>
+            Proveedor
+            <input type="text" id="proveedor" required />
+          </label>
+          <label>
+            Concepto
+            <input type="text" id="concepto" required />
+          </label>
+          <label>
+            Numero de factura
+            <input type="text" id="numero_factura" required />
+          </label>
+          <label>
+            Monto
+            <input type="number" id="monto" step="0.01" min="0" required />
+          </label>
+          <label>
+            Fecha de emision
+            <input type="date" id="fecha_emision" required />
+          </label>
+          <label>
+            Fecha de vencimiento
+            <input type="date" id="fecha_vencimiento" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="submit-btn">Guardar</button>
+          <button type="button" id="cancel-edit" class="secondary" hidden>Cancelar edicion</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Cuentas registradas</h2>
+        <div class="toolbar-actions">
+          <label class="checkbox-label">
+            <input type="checkbox" id="filtro-pendientes" />
+            Solo pendientes
+          </label>
+          <a href="/api/cuentas/export/csv" class="button">Exportar CSV</a>
+          <a href="/api/cuentas/export/xlsx" class="button">Exportar Excel</a>
+        </div>
+      </div>
+      <div id="mensaje-vencimiento" class="alert" hidden></div>
+      <div class="table-wrapper">
+        <table id="tabla-cuentas">
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>Concepto</th>
+              <th># Factura</th>
+              <th>Emision</th>
+              <th>Vencimiento</th>
+              <th>Monto</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

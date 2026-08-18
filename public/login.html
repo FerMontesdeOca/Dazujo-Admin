@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Iniciar sesion | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="login-logo" />
+    <h1>Iniciar sesion</h1>
+    <form id="login-form">
+      <label>
+        Email
+        <input type="email" id="email" required autocomplete="username" />
+      </label>
+      <label>
+        Contraseña
+        <input type="password" id="password" required autocomplete="current-password" />
+      </label>
+      <div id="login-error" class="alert alert-error" hidden></div>
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

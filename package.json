@@ -1,0 +1,22 @@
+{
+  "name": "cuentas-por-pagar",
+  "version": "1.0.0",
+  "description": "Gestion de cuentas por pagar con avisos por correo y exportacion",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "crear-usuario": "node scripts/crear-usuario.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14"
+  }
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Usuarios | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <nav class="nav">
+        <a href="index.html">Cuentas por Pagar</a>
+        <a href="gastos.html">Gastos</a>
+        <a href="usuarios.html" class="active" data-admin-only>Usuarios</a>
+      </nav>
+      <div class="user-box">
+        <span data-user-name></span>
+        <button type="button" id="logout-btn" class="secondary small">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Nuevo usuario</h2>
+      <form id="usuario-form">
+        <div class="grid">
+          <label>
+            Nombre completo
+            <input type="text" id="nombre" required />
+          </label>
+          <label>
+            Email
+            <input type="email" id="email" required />
+          </label>
+          <label>
+            Contraseña temporal
+            <input type="password" id="password" required minlength="8" />
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="is_admin" />
+            Es administrador
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit">Crear usuario</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Usuarios del equipo</h2>
+      <div class="table-wrapper">
+        <table id="tabla-usuarios">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Administrador</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="usuarios.js"></script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+:root {
+  --azul: #326ff8;
+  --azul-claro: #5ea5fd;
+  --gris-oscuro: #333333;
+  --gris-texto: #555555;
+  --gris-suave: #888888;
+  --borde: #e7e7e7;
+  --rojo: #e0433c;
+  --verde: #2e9e5b;
+  --fondo: #f5f6f7;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  background: var(--fondo);
+  color: var(--gris-texto);
+  font-weight: 300;
+}
+
+header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--borde);
+}
+
+.header-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo { height: 34px; width: auto; }
+
+.nav {
+  display: flex;
+  gap: 4px;
+  border-left: 1px solid var(--borde);
+  padding-left: 16px;
+}
+
+.nav a {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gris-suave);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 50px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav a:hover { color: var(--gris-oscuro); }
+
+.nav a.active {
+  color: var(--azul);
+  background: rgba(50, 111, 248, 0.1);
+}
+
+.user-box {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gris-texto);
+  white-space: nowrap;
+}
+
+main {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 0 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  padding: 24px 28px;
+  transition: border-color 0.2s ease;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--gris-oscuro);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: var(--gris-suave);
+  gap: 5px;
+  font-weight: 400;
+}
+
+input, select {
+  padding: 9px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--gris-oscuro);
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--azul);
+}
+
+.opcional {
+  color: var(--gris-suave);
+  font-weight: 300;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.form-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+}
+
+button, .button {
+  background: var(--azul);
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+button:hover, .button:hover {
+  background: var(--azul-claro);
+}
+
+button.secondary {
+  background: white;
+  color: var(--gris-texto);
+  border: 1px solid var(--borde);
+}
+
+button.secondary:hover {
+  background: var(--fondo);
+  color: var(--gris-oscuro);
+}
+
+button.danger {
+  background: var(--rojo);
+}
+
+button.danger:hover {
+  background: #eb6c66;
+}
+
+button.small, .button.small {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gris-texto);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  border-bottom: 1px solid var(--borde);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+th {
+  color: var(--gris-suave);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+tr:hover td { background: var(--fondo); }
+
+tr.vencida td { color: var(--rojo); }
+tr.pagada td { color: var(--verde); text-decoration: line-through; opacity: 0.7; }
+
+.acciones-cell {
+  display: flex;
+  gap: 6px;
+}
+
+.alert {
+  background: rgba(94, 165, 253, 0.1);
+  border: 1px solid rgba(50, 111, 248, 0.25);
+  color: var(--azul);
+  padding: 12px 16px;
+  border-radius: 5px;
+  font-size: 13px;
+  margin-top: 14px;
+  font-weight: 400;
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  main { margin: 16px auto; }
+  .card { padding: 20px; }
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Celular */
+@media (max-width: 600px) {
+  .header-inner {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .logo { height: 28px; }
+
+  .nav {
+    border-left: none;
+    padding-left: 0;
+    gap: 2px;
+    width: 100%;
+  }
+
+  .nav a {
+    flex: 1;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  main { padding: 0 12px 32px; gap: 14px; }
+
+  .card { padding: 16px; border-radius: 8px; }
+
+  .card h2 { font-size: 15px; }
+
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .form-actions { flex-direction: column; }
+  .form-actions button { width: 100%; justify-content: center; }
+
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar-actions { flex-direction: column; align-items: stretch; }
+  .toolbar-actions .button, .toolbar-actions select { width: 100%; justify-content: center; }
+
+  table { min-width: 560px; }
+
+  .login-card { width: 100%; margin: 0 16px; }
+}
+
+.login-body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fondo);
+}
+
+.login-card {
+  background: white;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 36px 32px;
+  width: 340px;
+  text-align: center;
+}
+
+.login-logo {
+  height: 40px;
+  margin-bottom: 20px;
+}
+
+.login-card h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gris-oscuro);
+  margin: 0 0 20px;
+}
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.login-card button {
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.alert-error {
+  background: rgba(224, 67, 60, 0.1);
+  border-color: rgba(224, 67, 60, 0.3);
+  color: var(--rojo);
+}
