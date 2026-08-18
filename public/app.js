@@ -37,11 +37,11 @@ function renderTabla(cuentas) {
     const tr = document.createElement('tr');
     tr.className = c.pagada ? 'pagada' : vencida ? 'vencida' : '';
     tr.innerHTML = `
-      <td>${c.proveedor}</td>
-      <td>${c.concepto}</td>
-      <td>${c.numero_factura}</td>
-      <td>${c.fecha_emision}</td>
-      <td>${c.fecha_vencimiento}${porVencer ? ' ⚠️' : ''}</td>
+      <td>${escapeHtml(c.proveedor)}</td>
+      <td>${escapeHtml(c.concepto)}</td>
+      <td>${escapeHtml(c.numero_factura)}</td>
+      <td>${escapeHtml(c.fecha_emision)}</td>
+      <td>${escapeHtml(c.fecha_vencimiento)}${porVencer ? ' ⚠️' : ''}</td>
       <td>${fmtMoneda(c.monto)}</td>
       <td>${c.pagada ? 'Pagada' : vencida ? 'Vencida' : 'Pendiente'}</td>
       <td class="acciones-cell"></td>

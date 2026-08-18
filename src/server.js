@@ -13,6 +13,10 @@ const { iniciarCron } = require('./cron');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway (y la mayoria de hosts) ponen la app detras de un proxy; esto permite
+// que req.ip refleje la IP real del visitante en vez de la del proxy interno.
+app.set('trust proxy', true);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '..', 'public')));

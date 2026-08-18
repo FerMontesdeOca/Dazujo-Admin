@@ -1,3 +1,9 @@
+function escapeHtml(valor) {
+  const div = document.createElement('div');
+  div.textContent = valor ?? '';
+  return div.innerHTML;
+}
+
 async function requireAuth() {
   const res = await fetch('/api/me');
   if (!res.ok) {

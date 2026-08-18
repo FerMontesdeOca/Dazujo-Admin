@@ -17,8 +17,8 @@ function renderTabla(usuarios) {
   usuarios.forEach((u) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${u.nombre}</td>
-      <td>${u.email}</td>
+      <td>${escapeHtml(u.nombre)}</td>
+      <td>${escapeHtml(u.email)}</td>
       <td>${u.is_admin ? 'Si' : 'No'}</td>
       <td>${u.active ? 'Activo' : 'Inactivo'}</td>
       <td class="acciones-cell"></td>

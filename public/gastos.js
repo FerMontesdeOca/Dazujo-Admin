@@ -33,12 +33,12 @@ function renderTabla(gastos) {
   filas.forEach((g) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${g.sucursal}</td>
-      <td>${g.tipo_gasto}</td>
-      <td>${g.concepto}</td>
-      <td>${g.fecha}</td>
+      <td>${escapeHtml(g.sucursal)}</td>
+      <td>${escapeHtml(g.tipo_gasto)}</td>
+      <td>${escapeHtml(g.concepto)}</td>
+      <td>${escapeHtml(g.fecha)}</td>
       <td>${fmtMoneda(g.monto)}</td>
-      <td>${g.proveedor || '-'}</td>
+      <td>${escapeHtml(g.proveedor) || '-'}</td>
       <td class="acciones-cell"></td>
     `;
 
