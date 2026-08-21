@@ -46,4 +46,18 @@ const TIPOS_GASTO = [
   'Otros',
 ];
 
-module.exports = { SUCURSALES, TIPOS_GASTO };
+// Meta mensual de ingreso fija por clinica (se aplica igual todos los meses).
+const METAS_MENSUALES = {
+  Flores: 579800,
+  Mirasierra: 579800,
+  Satélite: 403000,
+  Benavides: 416000,
+  Seminario: 403000,
+  Torreón: 579800,
+  Parras: 403000,
+  Cardenas: 403000,
+  Ixtlero: 390000,
+  Centro: 390000,
+};
+
+module.exports = { SUCURSALES, TIPOS_GASTO, METAS_MENSUALES };

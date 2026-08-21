@@ -26,29 +26,31 @@ header {
 }
 
 .header-inner {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 16px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.logo { height: 34px; width: auto; }
+.logo { height: 34px; width: auto; flex-shrink: 0; }
 
 .nav {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
   border-left: 1px solid var(--borde);
   padding-left: 16px;
 }
 
 .nav a {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--gris-suave);
   text-decoration: none;
-  padding: 8px 14px;
+  white-space: nowrap;
+  padding: 9px 11px;
   border-radius: 50px;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -231,6 +233,10 @@ button.small, .button.small {
   font-size: 12px;
   color: var(--gris-suave);
   margin-top: -8px;
+}
+
+.toolbar + .hint {
+  margin-top: 10px;
 }
 
 .kpi-row {

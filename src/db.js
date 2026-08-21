@@ -94,17 +94,6 @@ if (!columnasIngresos.includes('concepto')) {
 }
 
 db.exec(`
-  CREATE TABLE IF NOT EXISTS metas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sucursal TEXT NOT NULL,
-    mes TEXT NOT NULL,
-    monto REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(sucursal, mes)
-  )
-`);
-
-db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,

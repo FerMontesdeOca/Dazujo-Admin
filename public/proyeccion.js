@@ -1,6 +1,6 @@
 let GASTOS = [];
 let INGRESOS = [];
-let METAS = [];
+let METAS_MENSUALES = {};
 let SUCURSALES = [];
 
 let chartProyIngresos, chartProyGastos, chartProyUtilidad, chartProyMeta;
@@ -65,16 +65,15 @@ function ingresoDeSucursalEnMes(sucursal, mes) {
   return INGRESOS.filter((i) => i.sucursal === sucursal && i.mes === mes).reduce((sum, i) => sum + i.monto, 0);
 }
 
-function metaDeSucursalEnMes(sucursal, mes) {
-  const fila = METAS.find((m) => m.sucursal === sucursal && m.mes === mes);
-  return fila ? fila.monto : null;
+function metaDeSucursal(sucursal) {
+  return METAS_MENSUALES[sucursal] || null;
 }
 
 function resumenClinica(sucursal, mes) {
   const ingreso = ingresoDeSucursalEnMes(sucursal, mes);
   const gasto = gastoDeSucursalEnMes(sucursal, mes);
   const utilidad = ingreso - gasto;
-  const meta = metaDeSucursalEnMes(sucursal, mes);
+  const meta = metaDeSucursal(sucursal);
   const pctMeta = meta ? ingreso / meta : null;
   return { ingreso, gasto, utilidad, meta, pctMeta };
 }
@@ -83,9 +82,9 @@ async function cargarConfig() {
   const res = await fetch('/api/config');
   const data = await res.json();
   SUCURSALES = data.sucursales;
+  METAS_MENSUALES = data.metasMensuales || {};
 
   const opciones = SUCURSALES.map((s) => `<option value="${s}">${s}</option>`).join('');
-  document.getElementById('meta-sucursal').innerHTML = opciones;
   document.getElementById('proy-sucursal').innerHTML = opciones;
 }
 
@@ -98,61 +97,6 @@ async function cargarIngresos() {
   const res = await fetch('/api/ingresos');
   INGRESOS = await res.json();
 }
-
-async function cargarMetas() {
-  const res = await fetch('/api/metas');
-  METAS = await res.json();
-  renderTablaMetas();
-}
-
-function renderTablaMetas() {
-  const body = document.getElementById('metas-body');
-  body.innerHTML = METAS.map(
-    (m) => `
-    <tr>
-      <td>${escapeHtml(m.sucursal)}</td>
-      <td>${nombreMes(m.mes)}</td>
-      <td>${fmtMoneda(m.monto)}</td>
-      <td class="acciones-cell"><button class="small danger" data-id="${m.id}">Eliminar</button></td>
-    </tr>`
-  ).join('');
-
-  body.querySelectorAll('button[data-id]').forEach((btn) => {
-    btn.addEventListener('click', () => eliminarMeta(btn.dataset.id));
-  });
-}
-
-async function eliminarMeta(id) {
-  if (!confirm('¿Eliminar esta meta?')) return;
-  await fetch(`/api/metas/${id}`, { method: 'DELETE' });
-  await cargarMetas();
-  renderProyeccion();
-}
-
-document.getElementById('meta-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const payload = {
-    sucursal: document.getElementById('meta-sucursal').value,
-    mes: document.getElementById('meta-mes').value,
-    monto: document.getElementById('meta-monto').value,
-  };
-
-  const res = await fetch('/api/metas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Ocurrio un error al guardar la meta.');
-    return;
-  }
-
-  document.getElementById('meta-monto').value = '';
-  await cargarMetas();
-  renderProyeccion();
-});
 
 function renderKpis(sucursal, mes) {
   const r = resumenClinica(sucursal, mes);
@@ -171,7 +115,7 @@ function renderKpis(sucursal, mes) {
 
 function dibujarIngresosVsMeta(sucursal, meses) {
   const ingresos = meses.map((m) => ingresoDeSucursalEnMes(sucursal, m));
-  const metas = meses.map((m) => metaDeSucursalEnMes(sucursal, m));
+  const metas = meses.map(() => metaDeSucursal(sucursal));
 
   const ctx = document.getElementById('chart-proy-ingresos');
   if (chartProyIngresos) chartProyIngresos.destroy();
@@ -225,8 +169,8 @@ function dibujarUtilidad(sucursal, meses) {
 }
 
 function dibujarMeta(sucursal, meses) {
+  const meta = metaDeSucursal(sucursal);
   const porcentajes = meses.map((m) => {
-    const meta = metaDeSucursalEnMes(sucursal, m);
     if (!meta) return null;
     return (ingresoDeSucursalEnMes(sucursal, m) / meta) * 100;
   });
@@ -279,7 +223,6 @@ function renderProyeccion() {
 
 function inicializarFechas() {
   const actual = mesActual();
-  document.getElementById('meta-mes').value = actual;
   document.getElementById('proy-desde').value = ultimosMeses(actual, 12)[0];
   document.getElementById('proy-hasta').value = actual;
 }
@@ -292,6 +235,6 @@ requireAuth().then(async (user) => {
   if (!user) return;
   inicializarFechas();
   await cargarConfig();
-  await Promise.all([cargarGastos(), cargarIngresos(), cargarMetas()]);
+  await Promise.all([cargarGastos(), cargarIngresos()]);
   renderProyeccion();
 });

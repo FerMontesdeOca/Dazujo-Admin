@@ -30,43 +30,6 @@
 
   <main>
     <section class="card">
-      <h2>Meta mensual por clinica</h2>
-      <p class="hint">Define cuanto ingreso espera cada clinica en un mes, para poder medir el porcentaje cumplido.</p>
-      <form id="meta-form">
-        <div class="grid">
-          <label>
-            Clinica
-            <select id="meta-sucursal" required></select>
-          </label>
-          <label>
-            Mes
-            <input type="month" id="meta-mes" required />
-          </label>
-          <label>
-            Meta de ingreso
-            <input type="number" id="meta-monto" step="0.01" min="0" required />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit">Guardar meta</button>
-        </div>
-      </form>
-      <div class="table-wrapper">
-        <table id="tabla-metas">
-          <thead>
-            <tr>
-              <th>Clinica</th>
-              <th>Mes</th>
-              <th>Meta</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="metas-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card">
       <div class="toolbar">
         <h2>Proyeccion por clinica</h2>
         <div class="toolbar-actions">
@@ -81,7 +44,7 @@
           </label>
         </div>
       </div>
-      <p class="hint">Los KPIs muestran el mes "Hasta"; las graficas muestran todo el rango elegido.</p>
+      <p class="hint">Los KPIs muestran el mes "Hasta"; las graficas muestran todo el rango elegido. La meta de ingreso es fija por clinica.</p>
 
       <div class="kpi-row" id="proy-kpi-row"></div>
 

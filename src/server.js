@@ -5,10 +5,9 @@ const cookieParser = require('cookie-parser');
 const cuentasRouter = require('./routes/cuentas');
 const gastosRouter = require('./routes/gastos');
 const ingresosRouter = require('./routes/ingresos');
-const metasRouter = require('./routes/metas');
 const authRouter = require('./routes/auth');
 const usuariosRouter = require('./routes/usuarios');
-const { SUCURSALES, TIPOS_GASTO } = require('./constants');
+const { SUCURSALES, TIPOS_GASTO, METAS_MENSUALES } = require('./constants');
 const { requireAuth, requireAdmin } = require('./auth');
 const { iniciarCron } = require('./cron');
 
@@ -37,13 +36,12 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api', authRouter);
 
 app.get('/api/config', requireAuth, (req, res) => {
-  res.json({ sucursales: SUCURSALES, tiposGasto: TIPOS_GASTO });
+  res.json({ sucursales: SUCURSALES, tiposGasto: TIPOS_GASTO, metasMensuales: METAS_MENSUALES });
 });
 
 app.use('/api/cuentas', requireAuth, cuentasRouter);
 app.use('/api/gastos', requireAuth, gastosRouter);
 app.use('/api/ingresos', requireAuth, ingresosRouter);
-app.use('/api/metas', requireAuth, metasRouter);
 app.use('/api/usuarios', requireAuth, requireAdmin, usuariosRouter);
 
 app.listen(PORT, () => {
