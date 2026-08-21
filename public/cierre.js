@@ -236,6 +236,9 @@ function renderTablero() {
   const mes = document.getElementById('mes-cierre').value || mesActual();
   const totales = resumen(mes);
 
+  document.getElementById('tablero-export-csv').href = `/api/cierre/export/csv?mes=${mes}`;
+  document.getElementById('tablero-export-xlsx').href = `/api/cierre/export/xlsx?mes=${mes}`;
+
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Ingreso total</div><div class="kpi-value">${fmtMoneda(totales.ingreso)}</div></div>
     <div class="kpi-card"><div class="kpi-label">Gasto total</div><div class="kpi-value">${fmtMoneda(totales.gasto)}</div></div>

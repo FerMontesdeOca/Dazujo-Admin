@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const cuentasRouter = require('./routes/cuentas');
 const gastosRouter = require('./routes/gastos');
 const ingresosRouter = require('./routes/ingresos');
+const cierreRouter = require('./routes/cierre');
 const authRouter = require('./routes/auth');
 const usuariosRouter = require('./routes/usuarios');
 const { SUCURSALES, TIPOS_GASTO, METAS_MENSUALES } = require('./constants');
@@ -42,6 +43,7 @@ app.get('/api/config', requireAuth, (req, res) => {
 app.use('/api/cuentas', requireAuth, cuentasRouter);
 app.use('/api/gastos', requireAuth, gastosRouter);
 app.use('/api/ingresos', requireAuth, ingresosRouter);
+app.use('/api/cierre', requireAuth, cierreRouter);
 app.use('/api/usuarios', requireAuth, requireAdmin, usuariosRouter);
 
 app.listen(PORT, () => {
