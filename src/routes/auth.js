@@ -4,11 +4,14 @@ const { COOKIE_NAME, verifyPassword, hashPassword, crearSesion, obtenerUsuarioPo
 
 const router = express.Router();
 
+// Sin maxAge: es una cookie de sesion, el navegador la borra al cerrarse por
+// completo (no solo la pestana). El respaldo de 30 dias en el servidor
+// (SESSION_DIAS en src/auth.js) sigue como limite maximo por si el navegador
+// no la borra (por ejemplo, si tiene activado "restaurar pestañas").
 const cookieOpts = () => ({
   httpOnly: true,
   sameSite: 'lax',
   secure: process.env.NODE_ENV === 'production',
-  maxAge: 30 * 24 * 60 * 60 * 1000,
 });
 
 // Limite de intentos de login para frenar fuerza bruta: 5 intentos fallidos
