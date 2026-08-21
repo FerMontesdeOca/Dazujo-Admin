@@ -3,10 +3,37 @@ let INGRESOS = [];
 let METAS_MENSUALES = {};
 let SUCURSALES = [];
 
-let chartProyIngresos, chartProyGastos, chartProyUtilidad, chartProyMeta;
+const CHARTS = {};
 
 const fmtMoneda = (n) => Number(n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 const fmtPct = (n) => (n === null || n === undefined || !isFinite(n) ? '-' : `${(n * 100).toFixed(1)}%`);
+
+async function exportarExcelConGraficas(url, payload, nombreArchivo, boton) {
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Generando...';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      alert('Ocurrio un error al generar el Excel.');
+      return;
+    }
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = objectUrl;
+    enlace.download = `${nombreArchivo}.xlsx`;
+    enlace.click();
+    URL.revokeObjectURL(objectUrl);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
+}
 
 function mesActual() {
   const hoy = new Date();
@@ -118,8 +145,8 @@ function dibujarIngresosVsMeta(sucursal, meses) {
   const metas = meses.map(() => metaDeSucursal(sucursal));
 
   const ctx = document.getElementById('chart-proy-ingresos');
-  if (chartProyIngresos) chartProyIngresos.destroy();
-  chartProyIngresos = new Chart(ctx, {
+  if (CHARTS.ingresos) CHARTS.ingresos.destroy();
+  CHARTS.ingresos = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: meses.map(nombreMes),
@@ -136,8 +163,8 @@ function dibujarGastos(sucursal, meses) {
   const gastos = meses.map((m) => gastoDeSucursalEnMes(sucursal, m));
 
   const ctx = document.getElementById('chart-proy-gastos');
-  if (chartProyGastos) chartProyGastos.destroy();
-  chartProyGastos = new Chart(ctx, {
+  if (CHARTS.gastos) CHARTS.gastos.destroy();
+  CHARTS.gastos = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: meses.map(nombreMes),
@@ -151,8 +178,8 @@ function dibujarUtilidad(sucursal, meses) {
   const utilidades = meses.map((m) => ingresoDeSucursalEnMes(sucursal, m) - gastoDeSucursalEnMes(sucursal, m));
 
   const ctx = document.getElementById('chart-proy-utilidad');
-  if (chartProyUtilidad) chartProyUtilidad.destroy();
-  chartProyUtilidad = new Chart(ctx, {
+  if (CHARTS.utilidad) CHARTS.utilidad.destroy();
+  CHARTS.utilidad = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: meses.map(nombreMes),
@@ -177,8 +204,8 @@ function dibujarMeta(sucursal, meses) {
   const referencia = meses.map(() => 100);
 
   const ctx = document.getElementById('chart-proy-meta');
-  if (chartProyMeta) chartProyMeta.destroy();
-  chartProyMeta = new Chart(ctx, {
+  if (CHARTS.meta) CHARTS.meta.destroy();
+  CHARTS.meta = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: meses.map(nombreMes),
@@ -214,6 +241,9 @@ function renderProyeccion() {
   const meses = rangoMeses(desde, hasta);
   const mesKpi = meses[meses.length - 1];
 
+  document.getElementById('proy-export-csv').href =
+    `/api/proyeccion/export/csv?sucursal=${encodeURIComponent(sucursal)}&desde=${desde}&hasta=${hasta}`;
+
   renderKpis(sucursal, mesKpi);
   dibujarIngresosVsMeta(sucursal, meses);
   dibujarGastos(sucursal, meses);
@@ -230,6 +260,26 @@ function inicializarFechas() {
 document.getElementById('proy-sucursal').addEventListener('change', renderProyeccion);
 document.getElementById('proy-desde').addEventListener('change', renderProyeccion);
 document.getElementById('proy-hasta').addEventListener('change', renderProyeccion);
+
+document.getElementById('proy-export-xlsx').addEventListener('click', (e) => {
+  const sucursal = document.getElementById('proy-sucursal').value;
+  const desde = document.getElementById('proy-desde').value || mesActual();
+  const hasta = document.getElementById('proy-hasta').value || mesActual();
+
+  const graficas = [
+    { titulo: 'Ingresos vs meta', dataUrl: CHARTS.ingresos ? CHARTS.ingresos.toBase64Image() : null },
+    { titulo: 'Gastos', dataUrl: CHARTS.gastos ? CHARTS.gastos.toBase64Image() : null },
+    { titulo: 'Utilidad', dataUrl: CHARTS.utilidad ? CHARTS.utilidad.toBase64Image() : null },
+    { titulo: 'Porcentaje de meta cumplido', dataUrl: CHARTS.meta ? CHARTS.meta.toBase64Image() : null },
+  ].filter((g) => g.dataUrl);
+
+  exportarExcelConGraficas(
+    '/api/proyeccion/export/xlsx',
+    { sucursal, desde, hasta, graficas },
+    `proyeccion_${sucursal}`,
+    e.currentTarget
+  );
+});
 
 requireAuth().then(async (user) => {
   if (!user) return;

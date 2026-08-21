@@ -2,10 +2,37 @@ let GASTOS = [];
 let INGRESOS = [];
 let SUCURSALES = [];
 
-let chartIngresoGasto, chartUtilidad, chartTendencia, chartComparar;
+const CHARTS = {};
 
 const fmtMoneda = (n) => Number(n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 const fmtPct = (n) => (n === null || n === undefined || !isFinite(n) ? '-' : `${(n * 100).toFixed(1)}%`);
+
+async function exportarExcelConGraficas(url, payload, nombreArchivo, boton) {
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Generando...';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      alert('Ocurrio un error al generar el Excel.');
+      return;
+    }
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = objectUrl;
+    enlace.download = `${nombreArchivo}.xlsx`;
+    enlace.click();
+    URL.revokeObjectURL(objectUrl);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
+}
 
 function mesActual() {
   const hoy = new Date();
@@ -116,7 +143,6 @@ function renderTablaIngresos() {
     <tr>
       <td>${escapeHtml(i.sucursal)}</td>
       <td>${nombreMes(i.mes)}</td>
-      <td>${escapeHtml(i.concepto) || '-'}</td>
       <td>${fmtMoneda(i.monto)}</td>
       <td class="acciones-cell"><button class="small danger" data-id="${i.id}">Eliminar</button></td>
     </tr>`
@@ -199,8 +225,8 @@ function renderAlertas(mes) {
 
 function dibujarIngresoGasto(filas) {
   const ctx = document.getElementById('chart-ingreso-gasto');
-  if (chartIngresoGasto) chartIngresoGasto.destroy();
-  chartIngresoGasto = new Chart(ctx, {
+  if (CHARTS.ingresoGasto) CHARTS.ingresoGasto.destroy();
+  CHARTS.ingresoGasto = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: filas.map((f) => f.sucursal),
@@ -215,8 +241,8 @@ function dibujarIngresoGasto(filas) {
 
 function dibujarUtilidad(filas) {
   const ctx = document.getElementById('chart-utilidad');
-  if (chartUtilidad) chartUtilidad.destroy();
-  chartUtilidad = new Chart(ctx, {
+  if (CHARTS.utilidad) CHARTS.utilidad.destroy();
+  CHARTS.utilidad = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: filas.map((f) => f.sucursal),
@@ -237,7 +263,6 @@ function renderTablero() {
   const totales = resumen(mes);
 
   document.getElementById('tablero-export-csv').href = `/api/cierre/export/csv?mes=${mes}`;
-  document.getElementById('tablero-export-xlsx').href = `/api/cierre/export/xlsx?mes=${mes}`;
 
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Ingreso total</div><div class="kpi-value">${fmtMoneda(totales.ingreso)}</div></div>
@@ -274,8 +299,8 @@ function renderTendencia() {
   const datos = meses.map((m) => resumen(m, sucursal || null));
 
   const ctx = document.getElementById('chart-tendencia');
-  if (chartTendencia) chartTendencia.destroy();
-  chartTendencia = new Chart(ctx, {
+  if (CHARTS.tendencia) CHARTS.tendencia.destroy();
+  CHARTS.tendencia = new Chart(ctx, {
     type: 'line',
     data: {
       labels: meses.map(nombreMes),
@@ -291,8 +316,8 @@ function renderTendencia() {
 
 function dibujarComparar(etiquetas, resumenes) {
   const ctx = document.getElementById('chart-comparar');
-  if (chartComparar) chartComparar.destroy();
-  chartComparar = new Chart(ctx, {
+  if (CHARTS.comparar) CHARTS.comparar.destroy();
+  CHARTS.comparar = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['Ingreso', 'Gasto', 'Utilidad'],
@@ -382,7 +407,6 @@ document.getElementById('ingreso-form').addEventListener('submit', async (e) => 
     sucursal: document.getElementById('ing-sucursal').value,
     mes: document.getElementById('ing-mes').value,
     monto: document.getElementById('ing-monto').value,
-    concepto: document.getElementById('ing-concepto').value.trim(),
   };
 
   const res = await fetch('/api/ingresos', {
@@ -398,9 +422,18 @@ document.getElementById('ingreso-form').addEventListener('submit', async (e) => 
   }
 
   document.getElementById('ing-monto').value = '';
-  document.getElementById('ing-concepto').value = '';
   await cargarIngresos();
   renderTodo();
+});
+
+document.getElementById('tablero-export-xlsx').addEventListener('click', (e) => {
+  const mes = document.getElementById('mes-cierre').value || mesActual();
+  const graficas = [
+    { titulo: 'Ingreso vs gasto por clinica', dataUrl: CHARTS.ingresoGasto ? CHARTS.ingresoGasto.toBase64Image() : null },
+    { titulo: 'Utilidad por clinica', dataUrl: CHARTS.utilidad ? CHARTS.utilidad.toBase64Image() : null },
+  ].filter((g) => g.dataUrl);
+
+  exportarExcelConGraficas('/api/cierre/export/xlsx', { mes, graficas }, `cierre_${mes}`, e.currentTarget);
 });
 
 document.getElementById('mes-cierre').addEventListener('change', renderTodo);

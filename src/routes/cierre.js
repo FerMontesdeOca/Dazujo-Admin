@@ -47,18 +47,21 @@ function resumenMes(mes) {
   return filas;
 }
 
-function mesDesdeQuery(req) {
-  return /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : mesActual();
+function mesValido(valor) {
+  return /^\d{4}-\d{2}$/.test(valor) ? valor : mesActual();
 }
 
 router.get('/export/csv', (req, res) => {
-  const mes = mesDesdeQuery(req);
+  const mes = mesValido(req.query.mes);
   enviarCSV(res, `cierre_${mes}`, COLUMNAS, resumenMes(mes));
 });
 
-router.get('/export/xlsx', async (req, res) => {
-  const mes = mesDesdeQuery(req);
-  await enviarXLSX(res, `cierre_${mes}`, 'Cierre de mes', COLUMNAS, resumenMes(mes));
+// POST (no GET) porque va con las imagenes de las graficas ya renderizadas en
+// el navegador, que no caben de forma practica en la URL de un enlace normal.
+router.post('/export/xlsx', async (req, res) => {
+  const mes = mesValido(req.body.mes);
+  const graficas = Array.isArray(req.body.graficas) ? req.body.graficas : [];
+  await enviarXLSX(res, `cierre_${mes}`, 'Cierre de mes', COLUMNAS, resumenMes(mes), graficas);
 });
 
 module.exports = router;

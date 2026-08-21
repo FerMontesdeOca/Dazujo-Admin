@@ -31,7 +31,6 @@
   <main>
     <section class="card">
       <h2>Registrar ingreso mensual</h2>
-      <p class="hint">Puedes capturar varios abonos para la misma clinica y mes (por ejemplo, un corte por semana); se suman automaticamente para formar el total del mes.</p>
       <form id="ingreso-form">
         <div class="grid">
           <label>
@@ -43,16 +42,12 @@
             <input type="month" id="ing-mes" required />
           </label>
           <label>
-            Monto del abono
+            Ingreso
             <input type="number" id="ing-monto" step="0.01" min="0" required />
-          </label>
-          <label>
-            Concepto <span class="opcional">(opcional)</span>
-            <input type="text" id="ing-concepto" placeholder="Ej. Corte semana 1" />
           </label>
         </div>
         <div class="form-actions">
-          <button type="submit">Agregar abono</button>
+          <button type="submit">Guardar ingreso</button>
         </div>
       </form>
       <div class="table-wrapper">
@@ -61,8 +56,7 @@
             <tr>
               <th>Clinica</th>
               <th>Mes</th>
-              <th>Concepto</th>
-              <th>Monto</th>
+              <th>Ingreso</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -80,7 +74,7 @@
             <input type="month" id="mes-cierre" />
           </label>
           <a href="/api/cierre/export/csv" id="tablero-export-csv" class="button small">Exportar CSV</a>
-          <a href="/api/cierre/export/xlsx" id="tablero-export-xlsx" class="button small">Exportar Excel</a>
+          <button type="button" id="tablero-export-xlsx" class="small">Exportar Excel</button>
         </div>
       </div>
 

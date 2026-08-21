@@ -26,12 +26,12 @@ router.post('/', (req, res) => {
   const error = validarIngreso(req.body);
   if (error) return res.status(400).json({ error });
 
-  const { sucursal, mes, concepto } = req.body;
+  const { sucursal, mes } = req.body;
   const monto = Number(req.body.monto);
 
-  const info = db
-    .prepare('INSERT INTO ingresos (sucursal, mes, monto, concepto) VALUES (?, ?, ?, ?)')
-    .run(sucursal, mes, monto, concepto || null);
+  // El ingreso capturado reemplaza al anterior de esa clinica y mes (no se suma).
+  db.prepare('DELETE FROM ingresos WHERE sucursal = ? AND mes = ?').run(sucursal, mes);
+  const info = db.prepare('INSERT INTO ingresos (sucursal, mes, monto) VALUES (?, ?, ?)').run(sucursal, mes, monto);
 
   const fila = db.prepare('SELECT * FROM ingresos WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(fila);

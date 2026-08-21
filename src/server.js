@@ -6,6 +6,7 @@ const cuentasRouter = require('./routes/cuentas');
 const gastosRouter = require('./routes/gastos');
 const ingresosRouter = require('./routes/ingresos');
 const cierreRouter = require('./routes/cierre');
+const proyeccionRouter = require('./routes/proyeccion');
 const authRouter = require('./routes/auth');
 const usuariosRouter = require('./routes/usuarios');
 const { SUCURSALES, TIPOS_GASTO, METAS_MENSUALES } = require('./constants');
@@ -44,6 +45,7 @@ app.use('/api/cuentas', requireAuth, cuentasRouter);
 app.use('/api/gastos', requireAuth, gastosRouter);
 app.use('/api/ingresos', requireAuth, ingresosRouter);
 app.use('/api/cierre', requireAuth, cierreRouter);
+app.use('/api/proyeccion', requireAuth, proyeccionRouter);
 app.use('/api/usuarios', requireAuth, requireAdmin, usuariosRouter);
 
 app.listen(PORT, () => {
