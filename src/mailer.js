@@ -25,7 +25,6 @@ async function enviarAvisoVencimiento(cuentas) {
         <tr>
           <td style="padding:6px 10px;border:1px solid #ddd;">${c.proveedor}</td>
           <td style="padding:6px 10px;border:1px solid #ddd;">${c.concepto}</td>
-          <td style="padding:6px 10px;border:1px solid #ddd;">${c.numero_factura}</td>
           <td style="padding:6px 10px;border:1px solid #ddd;">${c.fecha_vencimiento}</td>
           <td style="padding:6px 10px;border:1px solid #ddd;text-align:right;">$${Number(c.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
         </tr>`
@@ -40,7 +39,6 @@ async function enviarAvisoVencimiento(cuentas) {
         <tr style="background:#f2f2f2;">
           <th style="padding:6px 10px;border:1px solid #ddd;">Proveedor</th>
           <th style="padding:6px 10px;border:1px solid #ddd;">Concepto</th>
-          <th style="padding:6px 10px;border:1px solid #ddd;"># Factura</th>
           <th style="padding:6px 10px;border:1px solid #ddd;">Vence</th>
           <th style="padding:6px 10px;border:1px solid #ddd;">Monto</th>
         </tr>

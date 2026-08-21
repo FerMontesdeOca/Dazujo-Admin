@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proyeccion Mensual | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <nav class="nav">
+        <a href="index.html">Cuentas por Pagar</a>
+        <a href="gastos.html">Gastos</a>
+        <a href="cierre.html">Cierre de Mes</a>
+        <a href="proyeccion.html" class="active">Proyeccion Mensual</a>
+        <a href="usuarios.html" data-admin-only>Usuarios</a>
+      </nav>
+      <div class="user-box">
+        <span data-user-name></span>
+        <button type="button" id="logout-btn" class="secondary small">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Meta mensual por clinica</h2>
+      <p class="hint">Define cuanto ingreso espera cada clinica en un mes, para poder medir el porcentaje cumplido.</p>
+      <form id="meta-form">
+        <div class="grid">
+          <label>
+            Clinica
+            <select id="meta-sucursal" required></select>
+          </label>
+          <label>
+            Mes
+            <input type="month" id="meta-mes" required />
+          </label>
+          <label>
+            Meta de ingreso
+            <input type="number" id="meta-monto" step="0.01" min="0" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit">Guardar meta</button>
+        </div>
+      </form>
+      <div class="table-wrapper">
+        <table id="tabla-metas">
+          <thead>
+            <tr>
+              <th>Clinica</th>
+              <th>Mes</th>
+              <th>Meta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="metas-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Proyeccion por clinica</h2>
+        <div class="toolbar-actions">
+          <select id="proy-sucursal"></select>
+          <label class="checkbox-label">
+            Desde
+            <input type="month" id="proy-desde" />
+          </label>
+          <label class="checkbox-label">
+            Hasta
+            <input type="month" id="proy-hasta" />
+          </label>
+        </div>
+      </div>
+      <p class="hint">Los KPIs muestran el mes "Hasta"; las graficas muestran todo el rango elegido.</p>
+
+      <div class="kpi-row" id="proy-kpi-row"></div>
+
+      <div class="chart-grid">
+        <div class="chart-box">
+          <h3>Ingresos vs meta</h3>
+          <canvas id="chart-proy-ingresos"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Gastos</h3>
+          <canvas id="chart-proy-gastos"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Utilidad</h3>
+          <canvas id="chart-proy-utilidad"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Porcentaje de meta cumplido</h3>
+          <canvas id="chart-proy-meta"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="proyeccion.js"></script>
+</body>
+</html>

@@ -17,9 +17,19 @@ db.exec(`
     monto REAL NOT NULL,
     pagada INTEGER NOT NULL DEFAULT 0,
     notificada_at TEXT,
+    aviso_7_enviado INTEGER NOT NULL DEFAULT 0,
+    aviso_3_enviado INTEGER NOT NULL DEFAULT 0,
+    aviso_1_enviado INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )
 `);
+
+const columnasCuentas = db.prepare('PRAGMA table_info(cuentas_por_pagar)').all().map((c) => c.name);
+for (const columna of ['aviso_7_enviado', 'aviso_3_enviado', 'aviso_1_enviado']) {
+  if (!columnasCuentas.includes(columna)) {
+    db.exec(`ALTER TABLE cuentas_por_pagar ADD COLUMN ${columna} INTEGER NOT NULL DEFAULT 0`);
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS gastos (
@@ -31,7 +41,66 @@ db.exec(`
     monto REAL NOT NULL,
     proveedor TEXT,
     numero_factura TEXT,
+    grupo_id TEXT,
+    monto_total REAL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+const columnasGastos = db.prepare('PRAGMA table_info(gastos)').all().map((c) => c.name);
+if (!columnasGastos.includes('grupo_id')) {
+  db.exec('ALTER TABLE gastos ADD COLUMN grupo_id TEXT');
+}
+if (!columnasGastos.includes('monto_total')) {
+  db.exec('ALTER TABLE gastos ADD COLUMN monto_total REAL');
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ingresos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sucursal TEXT NOT NULL,
+    mes TEXT NOT NULL,
+    monto REAL NOT NULL,
+    concepto TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+// Los ingresos empezaron como "un solo valor por sucursal+mes" (con UNIQUE).
+// Ahora cada captura es un abono que se suma a los demas del mes, asi que hay
+// que quitar esa restriccion en bases de datos que ya existian con el esquema viejo.
+const indicesIngresos = db.prepare('PRAGMA index_list(ingresos)').all();
+if (indicesIngresos.some((idx) => idx.unique)) {
+  db.exec(`
+    CREATE TABLE ingresos_nueva (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sucursal TEXT NOT NULL,
+      mes TEXT NOT NULL,
+      monto REAL NOT NULL,
+      concepto TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    'INSERT INTO ingresos_nueva (id, sucursal, mes, monto, created_at) SELECT id, sucursal, mes, monto, created_at FROM ingresos'
+  );
+  db.exec('DROP TABLE ingresos');
+  db.exec('ALTER TABLE ingresos_nueva RENAME TO ingresos');
+}
+
+const columnasIngresos = db.prepare('PRAGMA table_info(ingresos)').all().map((c) => c.name);
+if (!columnasIngresos.includes('concepto')) {
+  db.exec('ALTER TABLE ingresos ADD COLUMN concepto TEXT');
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS metas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sucursal TEXT NOT NULL,
+    mes TEXT NOT NULL,
+    monto REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(sucursal, mes)
   )
 `);
 

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cierre de Mes | Dazujo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,600,700" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <nav class="nav">
+        <a href="index.html">Cuentas por Pagar</a>
+        <a href="gastos.html">Gastos</a>
+        <a href="cierre.html" class="active">Cierre de Mes</a>
+        <a href="proyeccion.html">Proyeccion Mensual</a>
+        <a href="usuarios.html" data-admin-only>Usuarios</a>
+      </nav>
+      <div class="user-box">
+        <span data-user-name></span>
+        <button type="button" id="logout-btn" class="secondary small">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Registrar ingreso mensual</h2>
+      <p class="hint">Puedes capturar varios abonos para la misma clinica y mes (por ejemplo, un corte por semana); se suman automaticamente para formar el total del mes.</p>
+      <form id="ingreso-form">
+        <div class="grid">
+          <label>
+            Clinica
+            <select id="ing-sucursal" required></select>
+          </label>
+          <label>
+            Mes
+            <input type="month" id="ing-mes" required />
+          </label>
+          <label>
+            Monto del abono
+            <input type="number" id="ing-monto" step="0.01" min="0" required />
+          </label>
+          <label>
+            Concepto <span class="opcional">(opcional)</span>
+            <input type="text" id="ing-concepto" placeholder="Ej. Corte semana 1" />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit">Agregar abono</button>
+        </div>
+      </form>
+      <div class="table-wrapper">
+        <table id="tabla-ingresos">
+          <thead>
+            <tr>
+              <th>Clinica</th>
+              <th>Mes</th>
+              <th>Concepto</th>
+              <th>Monto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="ingresos-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Tablero del cierre</h2>
+        <div class="toolbar-actions">
+          <label class="checkbox-label">
+            Mes de cierre
+            <input type="month" id="mes-cierre" />
+          </label>
+        </div>
+      </div>
+
+      <div class="kpi-row" id="kpi-row"></div>
+
+      <div class="table-wrapper">
+        <table id="tabla-clinicas">
+          <thead>
+            <tr>
+              <th>Clinica</th>
+              <th>Ingreso</th>
+              <th>Gasto</th>
+              <th>Utilidad</th>
+              <th>Margen</th>
+            </tr>
+          </thead>
+          <tbody id="clinicas-body"></tbody>
+        </table>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-box">
+          <h3>Ingreso vs gasto por clinica</h3>
+          <canvas id="chart-ingreso-gasto"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Utilidad por clinica</h3>
+          <canvas id="chart-utilidad"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Alertas de gastos</h2>
+      <p class="hint">Compara el gasto de cada clinica en el mes de cierre contra el mes anterior.</p>
+      <div id="alertas-lista"></div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Tendencia</h2>
+        <div class="toolbar-actions">
+          <select id="tendencia-sucursal">
+            <option value="">Todas las clinicas</option>
+          </select>
+          <label class="checkbox-label">
+            Desde
+            <input type="month" id="tendencia-desde" />
+          </label>
+          <label class="checkbox-label">
+            Hasta
+            <input type="month" id="tendencia-hasta" />
+          </label>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="chart-tendencia"></canvas>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Comparar</h2>
+      <div class="comparar-modo-row">
+        <label class="checkbox-label">
+          <input type="radio" name="modo-comparar" id="modo-clinicas" checked />
+          Clinica vs clinica
+        </label>
+        <label class="checkbox-label">
+          <input type="radio" name="modo-comparar" id="modo-meses" />
+          Mes vs mes
+        </label>
+      </div>
+
+      <div id="comparar-clinicas" class="grid">
+        <label>
+          Mes
+          <input type="month" id="cmp-clin-mes" />
+        </label>
+        <label>
+          Clinica A
+          <select id="cmp-clin-a"></select>
+        </label>
+        <label>
+          Clinica B
+          <select id="cmp-clin-b"></select>
+        </label>
+      </div>
+
+      <div id="comparar-meses" class="grid" hidden>
+        <label>
+          Clinica
+          <select id="cmp-mes-sucursal">
+            <option value="">Todas las clinicas</option>
+          </select>
+        </label>
+        <label>
+          Mes A
+          <input type="month" id="cmp-mes-a" />
+        </label>
+        <label>
+          Mes B
+          <input type="month" id="cmp-mes-b" />
+        </label>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="tabla-comparar">
+          <thead>
+            <tr id="comparar-encabezado"></tr>
+          </thead>
+          <tbody id="comparar-body"></tbody>
+        </table>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="chart-comparar"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="cierre.js"></script>
+</body>
+</html>

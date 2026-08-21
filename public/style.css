@@ -109,6 +109,10 @@ label {
   font-weight: 400;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 input, select {
   padding: 9px 12px;
   border: 1px solid var(--borde);
@@ -202,6 +206,128 @@ button.small, .button.small {
   gap: 6px;
   font-size: 13px;
   color: var(--gris-texto);
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 5px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.checkbox-grid label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gris-texto);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--gris-suave);
+  margin-top: -8px;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.kpi-card {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.kpi-card .kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gris-suave);
+  font-weight: 600;
+}
+
+.kpi-card .kpi-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--gris-oscuro);
+  margin-top: 4px;
+}
+
+.negativo { color: var(--rojo); font-weight: 600; }
+.positivo { color: var(--verde); font-weight: 600; }
+
+.comparar-modo-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.chart-box {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 18px;
+}
+
+.chart-grid .chart-box { margin-top: 0; }
+
+.chart-box h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gris-oscuro);
+}
+
+.chart-box canvas {
+  max-height: 320px;
+}
+
+.alerta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(224, 67, 60, 0.25);
+  background: rgba(224, 67, 60, 0.06);
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--gris-texto);
+}
+
+.alerta-item strong { color: var(--gris-oscuro); }
+
+.alerta-vacia {
+  font-size: 13px;
+  color: var(--gris-suave);
+}
+
+.badge-compartido {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--azul);
+  background: rgba(50, 111, 248, 0.1);
+  padding: 2px 7px;
+  border-radius: 50px;
+  vertical-align: middle;
 }
 
 .table-wrapper {

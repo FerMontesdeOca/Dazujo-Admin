@@ -39,7 +39,6 @@ function renderTabla(cuentas) {
     tr.innerHTML = `
       <td>${escapeHtml(c.proveedor)}</td>
       <td>${escapeHtml(c.concepto)}</td>
-      <td>${escapeHtml(c.numero_factura)}</td>
       <td>${escapeHtml(c.fecha_emision)}</td>
       <td>${escapeHtml(c.fecha_vencimiento)}${porVencer ? ' ⚠️' : ''}</td>
       <td>${fmtMoneda(c.monto)}</td>
@@ -82,7 +81,6 @@ function cargarEnFormulario(c) {
   document.getElementById('cuenta-id').value = c.id;
   document.getElementById('proveedor').value = c.proveedor;
   document.getElementById('concepto').value = c.concepto;
-  document.getElementById('numero_factura').value = c.numero_factura;
   document.getElementById('monto').value = c.monto;
   document.getElementById('fecha_emision').value = c.fecha_emision;
   document.getElementById('fecha_vencimiento').value = c.fecha_vencimiento;
@@ -121,7 +119,6 @@ form.addEventListener('submit', async (e) => {
   const payload = {
     proveedor: document.getElementById('proveedor').value.trim(),
     concepto: document.getElementById('concepto').value.trim(),
-    numero_factura: document.getElementById('numero_factura').value.trim(),
     monto: document.getElementById('monto').value,
     fecha_emision: document.getElementById('fecha_emision').value,
     fecha_vencimiento: document.getElementById('fecha_vencimiento').value,

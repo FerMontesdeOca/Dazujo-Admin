@@ -17,6 +17,7 @@
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "twilio": "^6.1.0"
   }
 }

@@ -54,6 +54,21 @@ Gmail no permite usar tu contraseña normal desde apps externas, necesitas una "
 
 La app revisa automaticamente todos los dias a las 8:00 am (hora del servidor) si hay facturas por vencer y, si las hay, envia un correo. Tambien puedes forzar una revision manual llamando a `POST /api/cuentas/revisar-vencimientos`.
 
+## 4b. Configurar avisos por WhatsApp (Twilio)
+
+Ademas del correo, la app puede mandar un WhatsApp automatico 7 dias, 3 dias y 1 dia antes de que venza cada cuenta por pagar (cada aviso se manda una sola vez por cuenta).
+
+1. Crea una cuenta en [twilio.com](https://www.twilio.com/) y entra a la [consola](https://console.twilio.com/).
+2. Copia tu **Account SID** y **Auth Token** (estan en el dashboard principal).
+3. Activa el **WhatsApp Sandbox** de Twilio (Messaging → Try it out → Send a WhatsApp message) para pruebas, o solicita un numero de WhatsApp de negocio verificado para produccion. En ambos casos obtienes un numero remitente (ej. `whatsapp:+14155238886`).
+4. Si usas el sandbox, cada numero que vaya a recibir avisos debe primero enviarle al numero de Twilio el codigo `join <palabra-clave>` desde WhatsApp (Twilio te lo indica en la consola); si no, Twilio rechazara los mensajes a ese numero.
+5. En tu archivo `.env`:
+   - `TWILIO_ACCOUNT_SID` y `TWILIO_AUTH_TOKEN` = los que copiaste en el paso 2.
+   - `TWILIO_WHATSAPP_FROM` = el numero remitente del paso 3.
+   - `NOTIFY_WHATSAPP_TO` = el/los numero(s) que deben recibir los avisos, en formato `+52155XXXXXXXX` (separados por coma si son varios).
+
+Si estas variables no estan configuradas, la app simplemente omite el envio de WhatsApp (sin afectar el resto de la app ni el aviso por correo).
+
 ## 5. Exportar informacion
 
 En cada seccion hay dos botones: "Exportar CSV" y "Exportar Excel", descargan toda la informacion registrada.
@@ -65,11 +80,8 @@ Railway permite correr esta app con almacenamiento persistente para la base de d
 1. Crea una cuenta en [railway.app](https://railway.app).
 2. Sube este proyecto a un repositorio de GitHub (o usa `railway up` desde la terminal con el [CLI de Railway](https://docs.railway.app/guides/cli)).
 3. En Railway, crea un nuevo proyecto y conecta el repositorio.
-4. En "Variables", agrega las mismas variables del archivo `.env` (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `NOTIFY_EMAIL_TO`, `DIAS_AVISO_VENCIMIENTO`).
+4. En "Variables", agrega las mismas variables del archivo `.env` (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `NOTIFY_EMAIL_TO`, `DIAS_AVISO_VENCIMIENTO`, y si usas WhatsApp: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `NOTIFY_WHATSAPP_TO`).
 5. En "Settings" agrega un **Volume** montado en la ruta `/app/data` para que la base de datos no se borre en cada despliegue.
 6. Railway detecta automaticamente que es una app de Node y ejecuta `npm start`. Al terminar te da una URL publica (algo como `tuapp.up.railway.app`) que puedes compartir con tu equipo.
 7. Una vez publicada, entra a la terminal de Railway (o corre el script localmente contra la base de datos remota) y ejecuta `npm run crear-usuario` para crear tu primer administrador ahi tambien.
 
-## 7. Proximos pasos posibles
-
-- Agregar avisos automaticos por WhatsApp (requiere contratar la API de Twilio o WhatsApp Business Cloud API).

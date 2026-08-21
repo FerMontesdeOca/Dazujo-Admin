@@ -29,3 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// Si el navegador restaura esta pagina desde el bfcache (por ejemplo al usar
+// "atras"/"adelante" o el historial), el script no se vuelve a ejecutar y se
+// podria ver la ultima pantalla cargada aunque la sesion ya haya cerrado.
+// Forzamos una recarga real para que se vuelva a validar la sesion con el servidor.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});

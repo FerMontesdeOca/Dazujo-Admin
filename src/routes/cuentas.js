@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { revisarVencimientos } = require('../cron');
+const { revisarVencimientos, revisarAvisosWhatsApp } = require('../cron');
 const { enviarCSV, enviarXLSX } = require('../export');
 
 const router = express.Router();
@@ -8,7 +8,6 @@ const router = express.Router();
 const COLUMNAS = [
   { header: 'Proveedor', key: 'proveedor', width: 25 },
   { header: 'Concepto', key: 'concepto', width: 25 },
-  { header: 'Numero Factura', key: 'numero_factura', width: 18 },
   { header: 'Fecha Emision', key: 'fecha_emision', width: 15 },
   { header: 'Fecha Vencimiento', key: 'fecha_vencimiento', width: 18 },
   { header: 'Monto', key: 'monto', width: 15 },
@@ -16,7 +15,7 @@ const COLUMNAS = [
 ];
 
 function validarCuenta(body) {
-  const requeridos = ['proveedor', 'concepto', 'numero_factura', 'fecha_emision', 'fecha_vencimiento', 'monto'];
+  const requeridos = ['proveedor', 'concepto', 'fecha_emision', 'fecha_vencimiento', 'monto'];
   for (const campo of requeridos) {
     if (body[campo] === undefined || body[campo] === null || body[campo] === '') {
       return `Falta el campo: ${campo}`;
@@ -37,13 +36,13 @@ router.post('/', (req, res) => {
   const error = validarCuenta(req.body);
   if (error) return res.status(400).json({ error });
 
-  const { proveedor, concepto, numero_factura, fecha_emision, fecha_vencimiento, monto } = req.body;
+  const { proveedor, concepto, fecha_emision, fecha_vencimiento, monto } = req.body;
   const info = db
     .prepare(
       `INSERT INTO cuentas_por_pagar (proveedor, concepto, numero_factura, fecha_emision, fecha_vencimiento, monto)
        VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(proveedor, concepto, numero_factura, fecha_emision, fecha_vencimiento, Number(monto));
+    .run(proveedor, concepto, '', fecha_emision, fecha_vencimiento, Number(monto));
 
   const nueva = db.prepare('SELECT * FROM cuentas_por_pagar WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(nueva);
@@ -55,7 +54,6 @@ router.put('/:id', (req, res) => {
 
   const proveedor = req.body.proveedor ?? existente.proveedor;
   const concepto = req.body.concepto ?? existente.concepto;
-  const numero_factura = req.body.numero_factura ?? existente.numero_factura;
   const fecha_emision = req.body.fecha_emision ?? existente.fecha_emision;
   const fecha_vencimiento = req.body.fecha_vencimiento ?? existente.fecha_vencimiento;
   const monto = req.body.monto !== undefined ? Number(req.body.monto) : existente.monto;
@@ -63,9 +61,9 @@ router.put('/:id', (req, res) => {
 
   db.prepare(
     `UPDATE cuentas_por_pagar
-     SET proveedor = ?, concepto = ?, numero_factura = ?, fecha_emision = ?, fecha_vencimiento = ?, monto = ?, pagada = ?
+     SET proveedor = ?, concepto = ?, fecha_emision = ?, fecha_vencimiento = ?, monto = ?, pagada = ?
      WHERE id = ?`
-  ).run(proveedor, concepto, numero_factura, fecha_emision, fecha_vencimiento, monto, pagada, req.params.id);
+  ).run(proveedor, concepto, fecha_emision, fecha_vencimiento, monto, pagada, req.params.id);
 
   const actualizada = db.prepare('SELECT * FROM cuentas_por_pagar WHERE id = ?').get(req.params.id);
   res.json(actualizada);
@@ -79,6 +77,7 @@ router.delete('/:id', (req, res) => {
 
 router.post('/revisar-vencimientos', async (req, res) => {
   await revisarVencimientos();
+  await revisarAvisosWhatsApp();
   res.json({ ok: true });
 });
 
