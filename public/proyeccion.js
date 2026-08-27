@@ -96,9 +96,10 @@ function metaDeSucursal(sucursal) {
   return METAS_MENSUALES[sucursal] || null;
 }
 
-function resumenClinica(sucursal, mes) {
-  const ingreso = ingresoDeSucursalEnMes(sucursal, mes);
-  const gasto = gastoDeSucursalEnMes(sucursal, mes);
+function resumenPromedio(sucursal, meses) {
+  const n = meses.length || 1;
+  const ingreso = meses.reduce((s, m) => s + ingresoDeSucursalEnMes(sucursal, m), 0) / n;
+  const gasto = meses.reduce((s, m) => s + gastoDeSucursalEnMes(sucursal, m), 0) / n;
   const utilidad = ingreso - gasto;
   const meta = metaDeSucursal(sucursal);
   const pctMeta = meta ? ingreso / meta : null;
@@ -125,18 +126,18 @@ async function cargarIngresos() {
   INGRESOS = await res.json();
 }
 
-function renderKpis(sucursal, mes) {
-  const r = resumenClinica(sucursal, mes);
+function renderKpis(sucursal, meses) {
+  const r = resumenPromedio(sucursal, meses);
   const kpiRow = document.getElementById('proy-kpi-row');
 
   const pctTexto = r.meta ? fmtPct(r.pctMeta) : 'Sin meta';
   const pctClase = r.meta ? (r.pctMeta >= 1 ? 'positivo' : 'negativo') : '';
 
   kpiRow.innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Ingreso</div><div class="kpi-value">${fmtMoneda(r.ingreso)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Gasto</div><div class="kpi-value">${fmtMoneda(r.gasto)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Utilidad</div><div class="kpi-value ${r.utilidad < 0 ? 'negativo' : 'positivo'}">${fmtMoneda(r.utilidad)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">% de meta cumplido</div><div class="kpi-value ${pctClase}">${pctTexto}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ingreso promedio</div><div class="kpi-value">${fmtMoneda(r.ingreso)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Gasto promedio</div><div class="kpi-value">${fmtMoneda(r.gasto)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Utilidad promedio</div><div class="kpi-value ${r.utilidad < 0 ? 'negativo' : 'positivo'}">${fmtMoneda(r.utilidad)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">% de meta cumplido (promedio)</div><div class="kpi-value ${pctClase}">${pctTexto}</div></div>
   `;
 }
 
@@ -239,12 +240,11 @@ function renderProyeccion() {
   const desde = document.getElementById('proy-desde').value || mesActual();
   const hasta = document.getElementById('proy-hasta').value || mesActual();
   const meses = rangoMeses(desde, hasta);
-  const mesKpi = meses[meses.length - 1];
 
   document.getElementById('proy-export-csv').href =
     `/api/proyeccion/export/csv?sucursal=${encodeURIComponent(sucursal)}&desde=${desde}&hasta=${hasta}`;
 
-  renderKpis(sucursal, mesKpi);
+  renderKpis(sucursal, meses);
   dibujarIngresosVsMeta(sucursal, meses);
   dibujarGastos(sucursal, meses);
   dibujarUtilidad(sucursal, meses);
