@@ -414,7 +414,14 @@ function renderTodo() {
   renderComparar();
 }
 
+const IDS_SELECTOR_MES = [
+  'ing-mes', 'mes-cierre', 'tendencia-desde', 'tendencia-hasta',
+  'cmp-clin-mes', 'cmp-mes-a', 'cmp-mes-b',
+];
+
 function inicializarFechas() {
+  IDS_SELECTOR_MES.forEach((id) => inicializarSelectorMes(id));
+
   const actual = mesActual();
   document.getElementById('ing-mes').value = actual;
   document.getElementById('mes-cierre').value = actual;
@@ -423,6 +430,8 @@ function inicializarFechas() {
   document.getElementById('cmp-clin-mes').value = actual;
   document.getElementById('cmp-mes-a').value = mesAnterior(actual);
   document.getElementById('cmp-mes-b').value = actual;
+
+  IDS_SELECTOR_MES.forEach((id) => refrescarSelectorMes(id));
 }
 
 document.getElementById('ing-pagina-anterior').addEventListener('click', () => {

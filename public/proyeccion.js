@@ -252,9 +252,15 @@ function renderProyeccion() {
 }
 
 function inicializarFechas() {
+  inicializarSelectorMes('proy-desde');
+  inicializarSelectorMes('proy-hasta');
+
   const actual = mesActual();
   document.getElementById('proy-desde').value = ultimosMeses(actual, 12)[0];
   document.getElementById('proy-hasta').value = actual;
+
+  refrescarSelectorMes('proy-desde');
+  refrescarSelectorMes('proy-hasta');
 }
 
 document.getElementById('proy-sucursal').addEventListener('change', renderProyeccion);

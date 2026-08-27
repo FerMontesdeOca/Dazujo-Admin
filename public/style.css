@@ -223,6 +223,24 @@ button.small, .button.small {
   color: var(--gris-texto);
 }
 
+.mes-selector {
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mes-selector select {
+  min-width: 0;
+}
+
+.mes-selector select:first-child {
+  flex: 1.3;
+}
+
+.mes-selector select:last-child {
+  flex: 1;
+}
+
 .checkbox-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
