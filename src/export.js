@@ -11,14 +11,8 @@ function enviarCSV(res, filename, columnas, filas) {
   res.send('﻿' + csv);
 }
 
-async function enviarXLSX(res, filename, hoja, columnas, filas, graficas = []) {
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet(hoja);
-  sheet.columns = columnas.map((c) => ({ header: c.header, key: c.key, width: c.width || 20 }));
-  sheet.getRow(1).font = { bold: true };
-  filas.forEach((fila) => sheet.addRow(fila));
-
-  let filaActual = filas.length + 3;
+function agregarGraficas(workbook, sheet, filaInicio, graficas) {
+  let filaActual = filaInicio;
   for (const grafica of graficas) {
     const match = /^data:image\/(png|jpeg);base64,/.exec(grafica.dataUrl || '');
     if (!match) continue;
@@ -31,6 +25,20 @@ async function enviarXLSX(res, filename, hoja, columnas, filas, graficas = []) {
     sheet.addImage(imageId, { tl: { col: 0, row: filaActual }, ext: { width: 480, height: 260 } });
     filaActual += 16;
   }
+  return filaActual;
+}
+
+function llenarHoja(workbook, sheet, columnas, filas, graficas = []) {
+  sheet.columns = columnas.map((c) => ({ header: c.header, key: c.key, width: c.width || 20 }));
+  sheet.getRow(1).font = { bold: true };
+  filas.forEach((fila) => sheet.addRow(fila));
+  agregarGraficas(workbook, sheet, filas.length + 3, graficas);
+}
+
+async function enviarXLSX(res, filename, hoja, columnas, filas, graficas = []) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(hoja);
+  llenarHoja(workbook, sheet, columnas, filas, graficas);
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
@@ -38,4 +46,18 @@ async function enviarXLSX(res, filename, hoja, columnas, filas, graficas = []) {
   res.end();
 }
 
-module.exports = { enviarCSV, enviarXLSX };
+// hojas: [{ nombre, columnas, filas, graficas }]
+async function enviarXLSXMultiHoja(res, filename, hojas) {
+  const workbook = new ExcelJS.Workbook();
+  for (const hoja of hojas) {
+    const sheet = workbook.addWorksheet(hoja.nombre);
+    llenarHoja(workbook, sheet, hoja.columnas, hoja.filas, hoja.graficas || []);
+  }
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
+  await workbook.xlsx.write(res);
+  res.end();
+}
+
+module.exports = { enviarCSV, enviarXLSX, enviarXLSXMultiHoja };

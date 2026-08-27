@@ -30,42 +30,6 @@
 
   <main>
     <section class="card">
-      <h2>Registrar ingreso mensual</h2>
-      <form id="ingreso-form">
-        <div class="grid">
-          <label>
-            Clinica
-            <select id="ing-sucursal" required></select>
-          </label>
-          <label>
-            Mes
-            <input type="month" id="ing-mes" required />
-          </label>
-          <label>
-            Ingreso
-            <input type="number" id="ing-monto" step="0.01" min="0" required />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit">Guardar ingreso</button>
-        </div>
-      </form>
-      <div class="table-wrapper">
-        <table id="tabla-ingresos">
-          <thead>
-            <tr>
-              <th>Clinica</th>
-              <th>Mes</th>
-              <th>Ingreso</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="ingresos-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="card">
       <div class="toolbar">
         <h2>Tablero del cierre</h2>
         <div class="toolbar-actions">
@@ -105,12 +69,6 @@
           <canvas id="chart-utilidad"></canvas>
         </div>
       </div>
-    </section>
-
-    <section class="card">
-      <h2>Alertas de gastos</h2>
-      <p class="hint">Compara el gasto de cada clinica en el mes de cierre contra el mes anterior.</p>
-      <div id="alertas-lista"></div>
     </section>
 
     <section class="card">
@@ -192,6 +150,53 @@
       <div class="chart-box">
         <canvas id="chart-comparar"></canvas>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Registrar ingreso mensual</h2>
+      <form id="ingreso-form">
+        <div class="grid">
+          <label>
+            Clinica
+            <select id="ing-sucursal" required></select>
+          </label>
+          <label>
+            Mes
+            <input type="month" id="ing-mes" required />
+          </label>
+          <label>
+            Ingreso
+            <input type="number" id="ing-monto" step="0.01" min="0" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit">Guardar ingreso</button>
+        </div>
+      </form>
+      <div class="table-wrapper">
+        <table id="tabla-ingresos">
+          <thead>
+            <tr>
+              <th>Clinica</th>
+              <th>Mes</th>
+              <th>Ingreso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="ingresos-body"></tbody>
+        </table>
+      </div>
+      <div class="paginacion">
+        <button type="button" id="ing-pagina-anterior" class="small secondary">‹ Anterior</button>
+        <span id="ing-pagina-info"></span>
+        <button type="button" id="ing-pagina-siguiente" class="small secondary">Siguiente ›</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Alertas de gastos</h2>
+      <p class="hint">Compara el gasto de cada clinica en el mes de cierre contra el mes anterior.</p>
+      <div id="alertas-lista"></div>
     </section>
   </main>
 

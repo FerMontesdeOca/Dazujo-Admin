@@ -9,6 +9,7 @@ const SUCURSALES = [
   'Cardenas',
   'Ixtlero',
   'Centro',
+  'Las Torres',
 ];
 
 const TIPOS_GASTO = [
@@ -29,7 +30,7 @@ const TIPOS_GASTO = [
   'Mantenimiento',
   'Mercadotecnia (agencias y saldo meta)',
   'Nómina/IMSS/ISN/ISR',
-  'Nómina IMSS ISN e ISR de comisiones',
+  'Nómina IMSS ISN e ISR de comodines',
   'Nómina IMSS ISN e ISR administración',
   'Devolución a pacientes',
   'Renta de casas',
@@ -43,6 +44,8 @@ const TIPOS_GASTO = [
   'Trámites administrativos',
   'Servicios legales',
   'Finiquitos',
+  'Oficina',
+  'Viaticos',
   'Otros',
 ];
 

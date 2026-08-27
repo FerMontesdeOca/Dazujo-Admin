@@ -54,6 +54,9 @@ if (!columnasGastos.includes('grupo_id')) {
 if (!columnasGastos.includes('monto_total')) {
   db.exec('ALTER TABLE gastos ADD COLUMN monto_total REAL');
 }
+if (!columnasGastos.includes('comprobante')) {
+  db.exec('ALTER TABLE gastos ADD COLUMN comprobante TEXT');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS ingresos (

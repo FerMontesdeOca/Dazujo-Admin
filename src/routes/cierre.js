@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { SUCURSALES } = require('../constants');
-const { enviarCSV, enviarXLSX } = require('../export');
+const { enviarCSV, enviarXLSXMultiHoja } = require('../export');
 
 const router = express.Router();
 
@@ -56,12 +56,32 @@ router.get('/export/csv', (req, res) => {
   enviarCSV(res, `cierre_${mes}`, COLUMNAS, resumenMes(mes));
 });
 
+const COLUMNAS_TENDENCIA = [
+  { header: 'Mes', key: 'mes', width: 14 },
+  { header: 'Ingreso', key: 'ingreso', width: 16 },
+  { header: 'Gasto', key: 'gasto', width: 16 },
+  { header: 'Utilidad', key: 'utilidad', width: 16 },
+];
+
 // POST (no GET) porque va con las imagenes de las graficas ya renderizadas en
 // el navegador, que no caben de forma practica en la URL de un enlace normal.
 router.post('/export/xlsx', async (req, res) => {
   const mes = mesValido(req.body.mes);
   const graficas = Array.isArray(req.body.graficas) ? req.body.graficas : [];
-  await enviarXLSX(res, `cierre_${mes}`, 'Cierre de mes', COLUMNAS, resumenMes(mes), graficas);
+
+  const hojas = [{ nombre: 'Cierre de mes', columnas: COLUMNAS, filas: resumenMes(mes), graficas }];
+
+  const tendencia = req.body.tendencia;
+  if (tendencia && Array.isArray(tendencia.filas)) {
+    hojas.push({
+      nombre: 'Tendencia',
+      columnas: COLUMNAS_TENDENCIA,
+      filas: tendencia.filas,
+      graficas: Array.isArray(tendencia.graficas) ? tendencia.graficas : [],
+    });
+  }
+
+  await enviarXLSXMultiHoja(res, `cierre_${mes}`, hojas);
 });
 
 module.exports = router;

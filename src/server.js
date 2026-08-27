@@ -20,7 +20,9 @@ const PORT = process.env.PORT || 3000;
 // que req.ip refleje la IP real del visitante en vez de la del proxy interno.
 app.set('trust proxy', true);
 
-app.use(express.json());
+// Limite alto porque los exports de Excel con graficas mandan varias imagenes
+// en base64 dentro del JSON (el default de 100kb se queda corto).
+app.use(express.json({ limit: '20mb' }));
 app.use(cookieParser());
 
 // Evita que el navegador guarde en cache (disco o bfcache) las paginas y

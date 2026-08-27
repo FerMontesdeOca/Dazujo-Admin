@@ -12,6 +12,13 @@ const sucursalWrap = document.getElementById('sucursal-wrap');
 const sucursalesCompartidoWrap = document.getElementById('sucursales-compartido-wrap');
 const sucursalesCompartido = document.getElementById('sucursales-compartido');
 const montoLabel = document.getElementById('monto-label');
+const paginaAnteriorBtn = document.getElementById('pagina-anterior');
+const paginaSiguienteBtn = document.getElementById('pagina-siguiente');
+const paginaInfo = document.getElementById('pagina-info');
+
+const TAMANO_PAGINA = 10;
+let gastosCache = [];
+let paginaActual = 1;
 
 const fmtMoneda = (n) => Number(n).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
@@ -40,13 +47,23 @@ esCompartido.addEventListener('change', actualizarModoCompartido);
 
 async function cargarGastos() {
   const res = await fetch('/api/gastos');
-  const gastos = await res.json();
-  renderTabla(gastos);
+  gastosCache = await res.json();
+  paginaActual = 1;
+  renderTabla();
 }
 
-function renderTabla(gastos) {
+function renderTabla() {
   const sucursal = filtroSucursal.value;
-  const filas = gastos.filter((g) => (sucursal ? g.sucursal === sucursal : true));
+  const filtradas = gastosCache.filter((g) => (sucursal ? g.sucursal === sucursal : true));
+
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / TAMANO_PAGINA));
+  if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+  const inicio = (paginaActual - 1) * TAMANO_PAGINA;
+  const filas = filtradas.slice(inicio, inicio + TAMANO_PAGINA);
+
+  paginaInfo.textContent = `Página ${paginaActual} de ${totalPaginas}`;
+  paginaAnteriorBtn.disabled = paginaActual <= 1;
+  paginaSiguienteBtn.disabled = paginaActual >= totalPaginas;
 
   tablaBody.innerHTML = '';
   filas.forEach((g) => {
@@ -62,7 +79,7 @@ function renderTabla(gastos) {
           ? `<span class="badge-compartido" title="Parte de un gasto compartido de ${fmtMoneda(g.monto_total)}">Sí — total ${fmtMoneda(g.monto_total)}</span>`
           : 'No'
       }</td>
-      <td>${escapeHtml(g.proveedor) || '-'}</td>
+      <td>${g.comprobante ? `<a href="/api/gastos/comprobante/${encodeURIComponent(g.comprobante)}" target="_blank" rel="noopener">Ver</a>` : '-'}</td>
       <td class="acciones-cell"></td>
     `;
 
@@ -95,8 +112,9 @@ function cargarEnFormulario(g) {
   document.getElementById('concepto').value = g.concepto;
   document.getElementById('fecha').value = g.fecha;
   document.getElementById('monto').value = g.monto;
-  document.getElementById('proveedor').value = g.proveedor || '';
-  document.getElementById('numero_factura').value = g.numero_factura || '';
+  document.getElementById('comprobante-actual').textContent = g.comprobante
+    ? 'Ya tiene comprobante (sube uno nuevo para reemplazarlo)'
+    : '';
   formTitle.textContent = 'Editar gasto';
   submitBtn.textContent = 'Actualizar';
   cancelEditBtn.hidden = false;
@@ -106,6 +124,7 @@ function cargarEnFormulario(g) {
 function limpiarFormulario() {
   form.reset();
   document.getElementById('gasto-id').value = '';
+  document.getElementById('comprobante-actual').textContent = '';
   esCompartido.disabled = false;
   compartidoToggleWrap.hidden = false;
   actualizarModoCompartido();
@@ -124,18 +143,16 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('gasto-id').value;
   const compartido = !id && esCompartido.checked;
+  const archivoComprobante = document.getElementById('comprobante').files[0];
 
   let url = id ? `/api/gastos/${id}` : '/api/gastos';
-  let method = id ? 'PUT' : 'POST';
-  let payload = {
-    sucursal: selectSucursal.value,
-    tipo_gasto: selectTipoGasto.value,
-    concepto: document.getElementById('concepto').value.trim(),
-    fecha: document.getElementById('fecha').value,
-    monto: document.getElementById('monto').value,
-    proveedor: document.getElementById('proveedor').value.trim(),
-    numero_factura: document.getElementById('numero_factura').value.trim(),
-  };
+  const method = id ? 'PUT' : 'POST';
+  const datos = new FormData();
+  datos.set('tipo_gasto', selectTipoGasto.value);
+  datos.set('concepto', document.getElementById('concepto').value.trim());
+  datos.set('fecha', document.getElementById('fecha').value);
+  datos.set('monto', document.getElementById('monto').value);
+  if (archivoComprobante) datos.set('comprobante', archivoComprobante);
 
   if (compartido) {
     const sucursalesSeleccionadas = Array.from(
@@ -148,22 +165,12 @@ form.addEventListener('submit', async (e) => {
     }
 
     url = '/api/gastos/compartido';
-    payload = {
-      sucursales: sucursalesSeleccionadas,
-      tipo_gasto: selectTipoGasto.value,
-      concepto: document.getElementById('concepto').value.trim(),
-      fecha: document.getElementById('fecha').value,
-      monto: document.getElementById('monto').value,
-      proveedor: document.getElementById('proveedor').value.trim(),
-      numero_factura: document.getElementById('numero_factura').value.trim(),
-    };
+    datos.set('sucursales', JSON.stringify(sucursalesSeleccionadas));
+  } else {
+    datos.set('sucursal', selectSucursal.value);
   }
 
-  const res = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  const res = await fetch(url, { method, body: datos });
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -176,7 +183,80 @@ form.addEventListener('submit', async (e) => {
 });
 
 cancelEditBtn.addEventListener('click', limpiarFormulario);
-filtroSucursal.addEventListener('change', cargarGastos);
+filtroSucursal.addEventListener('change', () => {
+  paginaActual = 1;
+  renderTabla();
+});
+paginaAnteriorBtn.addEventListener('click', () => {
+  paginaActual -= 1;
+  renderTabla();
+});
+paginaSiguienteBtn.addEventListener('click', () => {
+  paginaActual += 1;
+  renderTabla();
+});
+
+const importarForm = document.getElementById('importar-form');
+const importarBtn = document.getElementById('importar-btn');
+const importarResultado = document.getElementById('importar-resultado');
+
+importarForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const archivo = document.getElementById('importar-archivo').files[0];
+  if (!archivo) return;
+
+  const datos = new FormData();
+  datos.set('archivo', archivo);
+
+  importarBtn.disabled = true;
+  importarBtn.textContent = 'Importando...';
+  importarResultado.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/gastos/importar', { method: 'POST', body: datos });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      importarResultado.innerHTML = `<div class="alert alert-error">${escapeHtml(data.error || 'Ocurrio un error al importar el archivo.')}</div>`;
+      return;
+    }
+
+    const filaIngresos = data.ingresos
+      .map((i) => `<tr><td>${escapeHtml(i.sucursal)}</td><td>${fmtMoneda(i.monto)}</td></tr>`)
+      .join('');
+    const filaGastos = data.gastos
+      .map((g) => `<tr><td>${escapeHtml(g.sucursal)}</td><td>${fmtMoneda(g.monto)}</td></tr>`)
+      .join('');
+    const avisos = data.sinMapear.length
+      ? `<p class="hint">No se pudieron mapear estas etiquetas (se omitieron): ${data.sinMapear.map(escapeHtml).join('; ')}</p>`
+      : '';
+
+    importarResultado.innerHTML = `
+      <div class="alert">Importado el mes <strong>${escapeHtml(data.mes)}</strong>: ${data.ingresos.length} ingreso(s) y ${data.gastos.length} sucursal(es) con gasto.</div>
+      <div class="resultado-importar-grid">
+        <div>
+          <h3>Ingresos importados</h3>
+          <div class="table-wrapper">
+            <table><thead><tr><th>Clinica</th><th>Monto</th></tr></thead><tbody>${filaIngresos || '<tr><td colspan="2">Ninguno</td></tr>'}</tbody></table>
+          </div>
+        </div>
+        <div>
+          <h3>Gastos importados (total por clinica)</h3>
+          <div class="table-wrapper">
+            <table><thead><tr><th>Clinica</th><th>Monto</th></tr></thead><tbody>${filaGastos || '<tr><td colspan="2">Ninguno</td></tr>'}</tbody></table>
+          </div>
+        </div>
+      </div>
+      ${avisos}
+    `;
+
+    cargarGastos();
+  } finally {
+    importarBtn.disabled = false;
+    importarBtn.textContent = 'Importar';
+    importarForm.reset();
+  }
+});
 
 requireAuth().then(async (user) => {
   if (!user) return;

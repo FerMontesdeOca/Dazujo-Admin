@@ -29,6 +29,23 @@
 
   <main>
     <section class="card">
+      <h2>Importar cierre de mes (Excel)</h2>
+      <p class="hint">Sube el archivo mensual de cierre. El mes se toma del nombre del archivo (ej. "Cierre de mes Diciembre"); se importan todos los gastos del mes y, si el archivo tambien trae ingresos, solo se toma el ingreso de ese mismo mes por clinica.</p>
+      <form id="importar-form">
+        <div class="grid">
+          <label>
+            Archivo Excel (.xlsx)
+            <input type="file" id="importar-archivo" accept=".xlsx" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="importar-btn">Importar</button>
+        </div>
+      </form>
+      <div id="importar-resultado"></div>
+    </section>
+
+    <section class="card">
       <h2 id="form-title">Nuevo gasto</h2>
       <form id="gasto-form">
         <input type="hidden" id="gasto-id" />
@@ -62,12 +79,9 @@
             <input type="number" id="monto" step="0.01" min="0" required />
           </label>
           <label>
-            Proveedor <span class="opcional">(opcional)</span>
-            <input type="text" id="proveedor" />
-          </label>
-          <label>
-            Numero de factura <span class="opcional">(opcional)</span>
-            <input type="text" id="numero_factura" />
+            Comprobante (foto) <span class="opcional">(opcional)</span>
+            <input type="file" id="comprobante" accept="image/*" />
+            <span id="comprobante-actual" class="opcional"></span>
           </label>
         </div>
         <div class="form-actions">
@@ -98,12 +112,17 @@
               <th>Fecha</th>
               <th>Monto</th>
               <th>Compartido</th>
-              <th>Proveedor</th>
+              <th>Comprobante</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="tabla-body"></tbody>
         </table>
+      </div>
+      <div class="paginacion">
+        <button type="button" id="pagina-anterior" class="small secondary">‹ Anterior</button>
+        <span id="pagina-info"></span>
+        <button type="button" id="pagina-siguiente" class="small secondary">Siguiente ›</button>
       </div>
     </section>
   </main>

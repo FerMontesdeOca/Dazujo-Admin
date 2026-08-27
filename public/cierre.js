@@ -4,6 +4,11 @@ let SUCURSALES = [];
 
 const CHARTS = {};
 
+const TAMANO_PAGINA_INGRESOS = 10;
+let ingresosPaginaActual = 1;
+
+let ultimaTendencia = null;
+
 const fmtMoneda = (n) => Number(n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 const fmtPct = (n) => (n === null || n === undefined || !isFinite(n) ? '-' : `${(n * 100).toFixed(1)}%`);
 
@@ -18,7 +23,8 @@ async function exportarExcelConGraficas(url, payload, nombreArchivo, boton) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      alert('Ocurrio un error al generar el Excel.');
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Ocurrio un error al generar el Excel.');
       return;
     }
     const blob = await res.blob();
@@ -133,20 +139,36 @@ async function cargarGastos() {
 async function cargarIngresos() {
   const res = await fetch('/api/ingresos');
   INGRESOS = await res.json();
+  ingresosPaginaActual = 1;
   renderTablaIngresos();
 }
 
 function renderTablaIngresos() {
   const body = document.getElementById('ingresos-body');
-  body.innerHTML = INGRESOS.map(
-    (i) => `
+  const anteriorBtn = document.getElementById('ing-pagina-anterior');
+  const siguienteBtn = document.getElementById('ing-pagina-siguiente');
+  const info = document.getElementById('ing-pagina-info');
+
+  const totalPaginas = Math.max(1, Math.ceil(INGRESOS.length / TAMANO_PAGINA_INGRESOS));
+  if (ingresosPaginaActual > totalPaginas) ingresosPaginaActual = totalPaginas;
+  const inicio = (ingresosPaginaActual - 1) * TAMANO_PAGINA_INGRESOS;
+  const filas = INGRESOS.slice(inicio, inicio + TAMANO_PAGINA_INGRESOS);
+
+  info.textContent = `Página ${ingresosPaginaActual} de ${totalPaginas}`;
+  anteriorBtn.disabled = ingresosPaginaActual <= 1;
+  siguienteBtn.disabled = ingresosPaginaActual >= totalPaginas;
+
+  body.innerHTML = filas
+    .map(
+      (i) => `
     <tr>
       <td>${escapeHtml(i.sucursal)}</td>
       <td>${nombreMes(i.mes)}</td>
       <td>${fmtMoneda(i.monto)}</td>
       <td class="acciones-cell"><button class="small danger" data-id="${i.id}">Eliminar</button></td>
     </tr>`
-  ).join('');
+    )
+    .join('');
 
   body.querySelectorAll('button[data-id]').forEach((btn) => {
     btn.addEventListener('click', () => eliminarIngreso(btn.dataset.id));
@@ -312,6 +334,8 @@ function renderTendencia() {
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
   });
+
+  ultimaTendencia = { meses, datos };
 }
 
 function dibujarComparar(etiquetas, resumenes) {
@@ -401,6 +425,15 @@ function inicializarFechas() {
   document.getElementById('cmp-mes-b').value = actual;
 }
 
+document.getElementById('ing-pagina-anterior').addEventListener('click', () => {
+  ingresosPaginaActual -= 1;
+  renderTablaIngresos();
+});
+document.getElementById('ing-pagina-siguiente').addEventListener('click', () => {
+  ingresosPaginaActual += 1;
+  renderTablaIngresos();
+});
+
 document.getElementById('ingreso-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const payload = {
@@ -428,12 +461,27 @@ document.getElementById('ingreso-form').addEventListener('submit', async (e) => 
 
 document.getElementById('tablero-export-xlsx').addEventListener('click', (e) => {
   const mes = document.getElementById('mes-cierre').value || mesActual();
+
   const graficas = [
     { titulo: 'Ingreso vs gasto por clinica', dataUrl: CHARTS.ingresoGasto ? CHARTS.ingresoGasto.toBase64Image() : null },
     { titulo: 'Utilidad por clinica', dataUrl: CHARTS.utilidad ? CHARTS.utilidad.toBase64Image() : null },
   ].filter((g) => g.dataUrl);
 
-  exportarExcelConGraficas('/api/cierre/export/xlsx', { mes, graficas }, `cierre_${mes}`, e.currentTarget);
+  const payload = { mes, graficas };
+
+  if (ultimaTendencia) {
+    payload.tendencia = {
+      filas: ultimaTendencia.meses.map((m, i) => ({
+        mes: nombreMes(m),
+        ingreso: ultimaTendencia.datos[i].ingreso,
+        gasto: ultimaTendencia.datos[i].gasto,
+        utilidad: ultimaTendencia.datos[i].utilidad,
+      })),
+      graficas: CHARTS.tendencia ? [{ titulo: 'Tendencia', dataUrl: CHARTS.tendencia.toBase64Image() }] : [],
+    };
+  }
+
+  exportarExcelConGraficas('/api/cierre/export/xlsx', payload, `cierre_${mes}`, e.currentTarget);
 });
 
 document.getElementById('mes-cierre').addEventListener('change', renderTodo);
