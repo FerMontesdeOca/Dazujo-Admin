@@ -13,11 +13,12 @@
   <header>
     <div class="header-inner">
       <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <select id="marca-selector" class="marca-selector-header" aria-label="Marca"></select>
       <nav class="nav">
-        <a href="index.html" class="active">Cuentas por Pagar</a>
+        <a href="index.html" class="active" data-marca-dazujo-only>Cuentas por Pagar</a>
         <a href="gastos.html">Gastos</a>
         <a href="cierre.html">Cierre de Mes</a>
-        <a href="proyeccion.html">Proyeccion Mensual</a>
+        <a href="proyeccion.html" data-marca-dazujo-only>Proyeccion Mensual</a>
         <a href="usuarios.html" data-admin-only>Usuarios</a>
       </nav>
       <div class="user-box">
@@ -42,6 +43,15 @@
             <input type="text" id="concepto" required />
           </label>
           <label>
+            Sucursal
+            <select id="sucursal" required></select>
+          </label>
+          <label>
+            Tipo de gasto
+            <span class="opcional">(con el que se registrara al pagarse)</span>
+            <select id="tipo_gasto" required></select>
+          </label>
+          <label>
             Monto
             <input type="number" id="monto" step="0.01" min="0" required />
           </label>
@@ -54,6 +64,10 @@
             <input type="date" id="fecha_vencimiento" required />
           </label>
         </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="es_fijo" />
+          Gasto fijo (al pagarla se crea automaticamente la del siguiente mes)
+        </label>
         <div class="form-actions">
           <button type="submit" id="submit-btn">Guardar</button>
           <button type="button" id="cancel-edit" class="secondary" hidden>Cancelar edicion</button>
@@ -80,9 +94,12 @@
             <tr>
               <th>Proveedor</th>
               <th>Concepto</th>
+              <th>Sucursal</th>
+              <th>Tipo de gasto</th>
               <th>Emision</th>
               <th>Vencimiento</th>
               <th>Monto</th>
+              <th>Fija</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -94,6 +111,7 @@
   </main>
 
   <script src="auth.js"></script>
+  <script src="marca.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

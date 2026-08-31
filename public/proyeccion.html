@@ -14,11 +14,12 @@
   <header>
     <div class="header-inner">
       <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <select id="marca-selector" class="marca-selector-header" aria-label="Marca"></select>
       <nav class="nav">
-        <a href="index.html">Cuentas por Pagar</a>
+        <a href="index.html" data-marca-dazujo-only>Cuentas por Pagar</a>
         <a href="gastos.html">Gastos</a>
         <a href="cierre.html">Cierre de Mes</a>
-        <a href="proyeccion.html" class="active">Proyeccion Mensual</a>
+        <a href="proyeccion.html" class="active" data-marca-dazujo-only>Proyeccion Mensual</a>
         <a href="usuarios.html" data-admin-only>Usuarios</a>
       </nav>
       <div class="user-box">
@@ -72,6 +73,7 @@
   </main>
 
   <script src="auth.js"></script>
+  <script src="marca.js"></script>
   <script src="mesSelector.js"></script>
   <script src="proyeccion.js"></script>
 </body>

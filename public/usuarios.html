@@ -13,11 +13,12 @@
   <header>
     <div class="header-inner">
       <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <select id="marca-selector" class="marca-selector-header" aria-label="Marca"></select>
       <nav class="nav">
-        <a href="index.html">Cuentas por Pagar</a>
+        <a href="index.html" data-marca-dazujo-only>Cuentas por Pagar</a>
         <a href="gastos.html">Gastos</a>
         <a href="cierre.html">Cierre de Mes</a>
-        <a href="proyeccion.html">Proyeccion Mensual</a>
+        <a href="proyeccion.html" data-marca-dazujo-only>Proyeccion Mensual</a>
         <a href="usuarios.html" class="active" data-admin-only>Usuarios</a>
       </nav>
       <div class="user-box">
@@ -72,9 +73,38 @@
         </table>
       </div>
     </section>
+
+    <section class="card">
+      <h2>Sucursales</h2>
+      <p class="hint">Dar de baja una sucursal no borra lo ya registrado; solo deja de aparecer para nuevos gastos, ingresos y cierres futuros.</p>
+      <form id="sucursal-form">
+        <div class="grid">
+          <label>
+            Nombre de la sucursal
+            <input type="text" id="sucursal-nombre" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit">Agregar sucursal</button>
+        </div>
+      </form>
+      <div class="table-wrapper">
+        <table id="tabla-sucursales">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-sucursales-body"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script src="auth.js"></script>
+  <script src="marca.js"></script>
   <script src="usuarios.js"></script>
 </body>
 </html>

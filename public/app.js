@@ -7,12 +7,21 @@ const filtroPendientes = document.getElementById('filtro-pendientes');
 const mensajeVencimiento = document.getElementById('mensaje-vencimiento');
 
 const fmtMoneda = (n) => Number(n).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+const selectSucursal = document.getElementById('sucursal');
+const selectTipoGasto = document.getElementById('tipo_gasto');
 
 function diasParaVencer(fechaVencimiento) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   const venc = new Date(fechaVencimiento + 'T00:00:00');
   return Math.round((venc - hoy) / (1000 * 60 * 60 * 24));
+}
+
+async function cargarConfig() {
+  const res = await fetch('/api/config');
+  const { sucursales, tiposGasto } = await res.json();
+  selectSucursal.innerHTML = sucursales.map((s) => `<option value="${s}">${s}</option>`).join('');
+  selectTipoGasto.innerHTML = tiposGasto.map((t) => `<option value="${t}">${t}</option>`).join('');
 }
 
 async function cargarCuentas() {
@@ -39,9 +48,12 @@ function renderTabla(cuentas) {
     tr.innerHTML = `
       <td>${escapeHtml(c.proveedor)}</td>
       <td>${escapeHtml(c.concepto)}</td>
+      <td>${escapeHtml(c.sucursal || '-')}</td>
+      <td>${escapeHtml(c.tipo_gasto || '-')}</td>
       <td>${escapeHtml(c.fecha_emision)}</td>
       <td>${escapeHtml(c.fecha_vencimiento)}${porVencer ? ' ⚠️' : ''}</td>
       <td>${fmtMoneda(c.monto)}</td>
+      <td>${c.es_fijo ? 'Si' : 'No'}</td>
       <td>${c.pagada ? 'Pagada' : vencida ? 'Vencida' : 'Pendiente'}</td>
       <td class="acciones-cell"></td>
     `;
@@ -81,9 +93,12 @@ function cargarEnFormulario(c) {
   document.getElementById('cuenta-id').value = c.id;
   document.getElementById('proveedor').value = c.proveedor;
   document.getElementById('concepto').value = c.concepto;
+  if (c.sucursal) selectSucursal.value = c.sucursal;
+  if (c.tipo_gasto) selectTipoGasto.value = c.tipo_gasto;
   document.getElementById('monto').value = c.monto;
   document.getElementById('fecha_emision').value = c.fecha_emision;
   document.getElementById('fecha_vencimiento').value = c.fecha_vencimiento;
+  document.getElementById('es_fijo').checked = !!c.es_fijo;
   formTitle.textContent = 'Editar cuenta por pagar';
   submitBtn.textContent = 'Actualizar';
   cancelEditBtn.hidden = false;
@@ -119,9 +134,12 @@ form.addEventListener('submit', async (e) => {
   const payload = {
     proveedor: document.getElementById('proveedor').value.trim(),
     concepto: document.getElementById('concepto').value.trim(),
+    sucursal: selectSucursal.value,
+    tipo_gasto: selectTipoGasto.value,
     monto: document.getElementById('monto').value,
     fecha_emision: document.getElementById('fecha_emision').value,
     fecha_vencimiento: document.getElementById('fecha_vencimiento').value,
+    es_fijo: document.getElementById('es_fijo').checked,
   };
 
   const url = id ? `/api/cuentas/${id}` : '/api/cuentas';
@@ -146,6 +164,8 @@ form.addEventListener('submit', async (e) => {
 cancelEditBtn.addEventListener('click', limpiarFormulario);
 filtroPendientes.addEventListener('change', cargarCuentas);
 
-requireAuth().then((user) => {
-  if (user) cargarCuentas();
+requireAuth().then(async (user) => {
+  if (!user) return;
+  await cargarConfig();
+  cargarCuentas();
 });

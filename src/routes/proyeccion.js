@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
-const { SUCURSALES, METAS_MENSUALES } = require('../constants');
+const { METAS_MENSUALES } = require('../constants');
+const sucursales = require('../sucursales');
 const { enviarCSV, enviarXLSX } = require('../export');
 
 const router = express.Router();
@@ -72,13 +73,15 @@ function datosProyeccion(sucursal, desde, hasta) {
 }
 
 router.get('/export/csv', (req, res) => {
-  const sucursal = SUCURSALES.includes(req.query.sucursal) ? req.query.sucursal : SUCURSALES[0];
+  const activas = sucursales.listarActivas();
+  const sucursal = activas.includes(req.query.sucursal) ? req.query.sucursal : activas[0];
   const filas = datosProyeccion(sucursal, req.query.desde, req.query.hasta);
   enviarCSV(res, `proyeccion_${sucursal}`, COLUMNAS, filas);
 });
 
 router.post('/export/xlsx', async (req, res) => {
-  const sucursal = SUCURSALES.includes(req.body.sucursal) ? req.body.sucursal : SUCURSALES[0];
+  const activas = sucursales.listarActivas();
+  const sucursal = activas.includes(req.body.sucursal) ? req.body.sucursal : activas[0];
   const filas = datosProyeccion(sucursal, req.body.desde, req.body.hasta);
   const graficas = Array.isArray(req.body.graficas) ? req.body.graficas : [];
   await enviarXLSX(res, `proyeccion_${sucursal}`, 'Proyeccion mensual', COLUMNAS, filas, graficas);

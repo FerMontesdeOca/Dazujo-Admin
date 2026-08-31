@@ -90,21 +90,27 @@ function nombreMes(mes) {
 }
 
 function gastoDeSucursalEnMes(sucursal, mes) {
-  return GASTOS.filter((g) => g.sucursal === sucursal && g.fecha.slice(0, 7) === mes).reduce((sum, g) => sum + g.monto, 0);
+  return GASTOS.filter((g) => g.marca === marcaActual() && g.sucursal === sucursal && g.fecha.slice(0, 7) === mes).reduce(
+    (sum, g) => sum + g.monto,
+    0
+  );
 }
 
 function gastoTotalEnMes(mes, sucursal) {
   if (sucursal) return gastoDeSucursalEnMes(sucursal, mes);
-  return GASTOS.filter((g) => g.fecha.slice(0, 7) === mes).reduce((sum, g) => sum + g.monto, 0);
+  return GASTOS.filter((g) => g.marca === marcaActual() && g.fecha.slice(0, 7) === mes).reduce((sum, g) => sum + g.monto, 0);
 }
 
 function ingresoDeSucursalEnMes(sucursal, mes) {
-  return INGRESOS.filter((i) => i.sucursal === sucursal && i.mes === mes).reduce((sum, i) => sum + i.monto, 0);
+  return INGRESOS.filter((i) => i.marca === marcaActual() && i.sucursal === sucursal && i.mes === mes).reduce(
+    (sum, i) => sum + i.monto,
+    0
+  );
 }
 
 function ingresoTotalEnMes(mes, sucursal) {
   if (sucursal) return ingresoDeSucursalEnMes(sucursal, mes);
-  return INGRESOS.filter((i) => i.mes === mes).reduce((sum, i) => sum + i.monto, 0);
+  return INGRESOS.filter((i) => i.marca === marcaActual() && i.mes === mes).reduce((sum, i) => sum + i.monto, 0);
 }
 
 function resumen(mes, sucursal) {
@@ -115,20 +121,60 @@ function resumen(mes, sucursal) {
   return { ingreso, gasto, utilidad, margen };
 }
 
+let TOMOX_SUCURSALES = [];
+
 async function cargarConfig() {
   const res = await fetch('/api/config');
   const data = await res.json();
   SUCURSALES = data.sucursales;
+  TOMOX_SUCURSALES = data.tomoxSucursales || [];
 
-  const opciones = SUCURSALES.map((s) => `<option value="${s}">${s}</option>`).join('');
-  document.getElementById('ing-sucursal').innerHTML = opciones;
-  document.getElementById('cmp-clin-a').innerHTML = opciones;
-  document.getElementById('cmp-clin-b').innerHTML = opciones;
-  if (SUCURSALES.length > 1) document.getElementById('cmp-clin-b').value = SUCURSALES[1];
+  actualizarSucursalesUI();
+}
 
-  const opcionesConTodas = '<option value="">Todas las clinicas</option>' + opciones;
+// Sucursales con las que se puede registrar un ingreso: Dazujo y Laboratorio
+// facturan en cualquier clinica de Dazujo; Tomox solo en sus propias sucursales.
+function sucursalesParaIngreso() {
+  return marcaActual() === 'tomox' ? TOMOX_SUCURSALES : SUCURSALES;
+}
+
+// Sucursales con las que se arma el tablero, la tendencia y el comparar:
+// Tomox usa solo sus propias sucursales; Laboratorio no se reparte por
+// clinica (su gasto es unico), asi que no ofrece desglose por sucursal.
+function sucursalesDelNegocio() {
+  const marca = marcaActual();
+  if (marca === 'tomox') return TOMOX_SUCURSALES;
+  if (marca === 'laboratorio') return [];
+  return SUCURSALES;
+}
+
+function actualizarSucursalesUI() {
+  const paraIngreso = sucursalesParaIngreso();
+  const paraNegocio = sucursalesDelNegocio();
+
+  document.getElementById('ing-sucursal').innerHTML = paraIngreso.map((s) => `<option value="${s}">${s}</option>`).join('');
+
+  const opcionesNegocio = paraNegocio.map((s) => `<option value="${s}">${s}</option>`).join('');
+  document.getElementById('cmp-clin-a').innerHTML = opcionesNegocio;
+  document.getElementById('cmp-clin-b').innerHTML = opcionesNegocio;
+  if (paraNegocio.length > 1) document.getElementById('cmp-clin-b').value = paraNegocio[1];
+
+  const opcionesConTodas = '<option value="">Todas las clinicas</option>' + opcionesNegocio;
   document.getElementById('tendencia-sucursal').innerHTML = opcionesConTodas;
   document.getElementById('cmp-mes-sucursal').innerHTML = opcionesConTodas;
+
+  // Laboratorio no tiene desglose por clinica: se quita por completo la
+  // opcion de "clinica vs clinica" del comparar (solo queda "mes vs mes",
+  // comparando el total).
+  const sinDesglose = paraNegocio.length === 0;
+  document.getElementById('comparar-modo-row').hidden = sinDesglose;
+  if (sinDesglose) {
+    document.getElementById('modo-meses').checked = true;
+  }
+
+  // En Tomox y Laboratorio, "Registrar ingreso mensual" se muestra primero;
+  // en Dazujo se queda en su lugar original (dashboards antes que captura).
+  document.getElementById('seccion-ingreso').style.order = marcaActual() === 'dazujo' ? '' : '-1';
 }
 
 async function cargarGastos() {
@@ -149,10 +195,11 @@ function renderTablaIngresos() {
   const siguienteBtn = document.getElementById('ing-pagina-siguiente');
   const info = document.getElementById('ing-pagina-info');
 
-  const totalPaginas = Math.max(1, Math.ceil(INGRESOS.length / TAMANO_PAGINA_INGRESOS));
+  const ingresosMarca = INGRESOS.filter((i) => i.marca === marcaActual());
+  const totalPaginas = Math.max(1, Math.ceil(ingresosMarca.length / TAMANO_PAGINA_INGRESOS));
   if (ingresosPaginaActual > totalPaginas) ingresosPaginaActual = totalPaginas;
   const inicio = (ingresosPaginaActual - 1) * TAMANO_PAGINA_INGRESOS;
-  const filas = INGRESOS.slice(inicio, inicio + TAMANO_PAGINA_INGRESOS);
+  const filas = ingresosMarca.slice(inicio, inicio + TAMANO_PAGINA_INGRESOS);
 
   info.textContent = `Página ${ingresosPaginaActual} de ${totalPaginas}`;
   anteriorBtn.disabled = ingresosPaginaActual <= 1;
@@ -186,10 +233,10 @@ function tipoPrincipalDeIncremento(sucursal, mes, previo) {
   const porTipoActual = {};
   const porTipoPrevio = {};
 
-  GASTOS.filter((g) => g.sucursal === sucursal && g.fecha.slice(0, 7) === mes).forEach((g) => {
+  GASTOS.filter((g) => g.marca === marcaActual() && g.sucursal === sucursal && g.fecha.slice(0, 7) === mes).forEach((g) => {
     porTipoActual[g.tipo_gasto] = (porTipoActual[g.tipo_gasto] || 0) + g.monto;
   });
-  GASTOS.filter((g) => g.sucursal === sucursal && g.fecha.slice(0, 7) === previo).forEach((g) => {
+  GASTOS.filter((g) => g.marca === marcaActual() && g.sucursal === sucursal && g.fecha.slice(0, 7) === previo).forEach((g) => {
     porTipoPrevio[g.tipo_gasto] = (porTipoPrevio[g.tipo_gasto] || 0) + g.monto;
   });
 
@@ -211,7 +258,10 @@ function renderAlertas(mes) {
   const contenedor = document.getElementById('alertas-lista');
   const alertas = [];
 
-  SUCURSALES.forEach((s) => {
+  // Laboratorio no se reparte por clinica: se revisa como un solo bucket.
+  const sucursalesARevisar = marcaActual() === 'laboratorio' ? ['Laboratorio'] : sucursalesDelNegocio();
+
+  sucursalesARevisar.forEach((s) => {
     const actual = gastoDeSucursalEnMes(s, mes);
     const anterior = gastoDeSucursalEnMes(s, previo);
 
@@ -284,7 +334,7 @@ function renderTablero() {
   const mes = document.getElementById('mes-cierre').value || mesActual();
   const totales = resumen(mes);
 
-  document.getElementById('tablero-export-csv').href = `/api/cierre/export/csv?mes=${mes}`;
+  document.getElementById('tablero-export-csv').href = `/api/cierre/export/csv?mes=${mes}&marca=${marcaActual()}`;
 
   document.getElementById('kpi-row').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Ingreso total</div><div class="kpi-value">${fmtMoneda(totales.ingreso)}</div></div>
@@ -293,7 +343,13 @@ function renderTablero() {
     <div class="kpi-card"><div class="kpi-label">Margen</div><div class="kpi-value">${fmtPct(totales.margen)}</div></div>
   `;
 
-  const filas = SUCURSALES.map((s) => ({ sucursal: s, ...resumen(mes, s) }));
+  // Laboratorio no se reparte por clinica (su gasto es unico): se muestra un
+  // solo renglon con el total en vez de la tabla por sucursal. Tomox solo usa
+  // sus propias sucursales, no las 12 de Dazujo.
+  const filas =
+    marcaActual() === 'laboratorio'
+      ? [{ sucursal: 'Laboratorio', ...totales }]
+      : sucursalesDelNegocio().map((s) => ({ sucursal: s, ...resumen(mes, s) }));
 
   document.getElementById('clinicas-body').innerHTML = filas
     .map(
@@ -449,6 +505,7 @@ document.getElementById('ingreso-form').addEventListener('submit', async (e) => 
     sucursal: document.getElementById('ing-sucursal').value,
     mes: document.getElementById('ing-mes').value,
     monto: document.getElementById('ing-monto').value,
+    marca: marcaActual(),
   };
 
   const res = await fetch('/api/ingresos', {
@@ -468,6 +525,42 @@ document.getElementById('ingreso-form').addEventListener('submit', async (e) => 
   renderTodo();
 });
 
+const importarCorteForm = document.getElementById('importar-corte-form');
+const importarCorteBtn = document.getElementById('importar-corte-btn');
+const importarCorteResultado = document.getElementById('importar-corte-resultado');
+
+importarCorteForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const archivo = document.getElementById('importar-corte-archivo').files[0];
+  if (!archivo) return;
+
+  const datos = new FormData();
+  datos.set('archivo', archivo);
+
+  importarCorteBtn.disabled = true;
+  importarCorteBtn.textContent = 'Importando...';
+  importarCorteResultado.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/cierre/importar', { method: 'POST', body: datos });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      importarCorteResultado.innerHTML = `<div class="alert alert-error">${escapeHtml(data.error || 'Ocurrio un error al importar el archivo.')}</div>`;
+      return;
+    }
+
+    importarCorteResultado.innerHTML = `<div class="alert">Registrado el ingreso de <strong>${escapeHtml(data.sucursal)}</strong> para <strong>${escapeHtml(data.mes)}</strong>: ${fmtMoneda(data.total)}</div>`;
+
+    await cargarIngresos();
+    renderTodo();
+  } finally {
+    importarCorteBtn.disabled = false;
+    importarCorteBtn.textContent = 'Importar';
+    importarCorteForm.reset();
+  }
+});
+
 document.getElementById('tablero-export-xlsx').addEventListener('click', (e) => {
   const mes = document.getElementById('mes-cierre').value || mesActual();
 
@@ -476,7 +569,7 @@ document.getElementById('tablero-export-xlsx').addEventListener('click', (e) => 
     { titulo: 'Utilidad por clinica', dataUrl: CHARTS.utilidad ? CHARTS.utilidad.toBase64Image() : null },
   ].filter((g) => g.dataUrl);
 
-  const payload = { mes, graficas };
+  const payload = { mes, marca: marcaActual(), graficas };
 
   if (ultimaTendencia) {
     payload.tendencia = {
@@ -490,7 +583,7 @@ document.getElementById('tablero-export-xlsx').addEventListener('click', (e) => 
     };
   }
 
-  exportarExcelConGraficas('/api/cierre/export/xlsx', payload, `cierre_${mes}`, e.currentTarget);
+  exportarExcelConGraficas('/api/cierre/export/xlsx', payload, `cierre_${mes}_${marcaActual()}`, e.currentTarget);
 });
 
 document.getElementById('mes-cierre').addEventListener('change', renderTodo);
@@ -505,6 +598,13 @@ document.getElementById('cmp-mes-a').addEventListener('change', renderComparar);
 document.getElementById('cmp-mes-b').addEventListener('change', renderComparar);
 document.getElementById('modo-clinicas').addEventListener('change', actualizarModoComparar);
 document.getElementById('modo-meses').addEventListener('change', actualizarModoComparar);
+
+window.addEventListener('marcaCambiada', () => {
+  actualizarSucursalesUI();
+  actualizarModoComparar();
+  renderTablaIngresos();
+  renderTodo();
+});
 
 requireAuth().then(async (user) => {
   if (!user) return;

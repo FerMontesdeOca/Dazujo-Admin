@@ -5,8 +5,8 @@ const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../db');
 const { enviarCSV, enviarXLSX } = require('../export');
-const { SUCURSALES, TIPOS_GASTO } = require('../constants');
-const { procesarArchivo } = require('../importadorCierre');
+const { TIPOS_GASTO, MARCAS, TOMOX_SUCURSALES, SUCURSAL_LABORATORIO } = require('../constants');
+const sucursalesDb = require('../sucursales');
 
 const router = express.Router();
 
@@ -30,21 +30,13 @@ const upload = multer({
   },
 });
 
-const uploadExcel = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!/\.xlsx$/i.test(file.originalname)) return cb(new Error('El archivo debe ser un Excel (.xlsx)'));
-    cb(null, true);
-  },
-});
-
 function borrarComprobante(nombreArchivo) {
   if (!nombreArchivo) return;
   fs.unlink(path.join(DIR_COMPROBANTES, nombreArchivo), () => {});
 }
 
 const COLUMNAS = [
+  { header: 'Marca', key: 'marca', width: 14 },
   { header: 'Sucursal', key: 'sucursal', width: 18 },
   { header: 'Tipo de Gasto', key: 'tipo_gasto', width: 25 },
   { header: 'Concepto', key: 'concepto', width: 25 },
@@ -58,14 +50,29 @@ function paraExportar(gastos) {
   return gastos.map((g) => ({ ...g, compartido: g.grupo_id ? 'Si' : 'No' }));
 }
 
-function validarGasto(body) {
+// Valida que la sucursal tenga sentido para la marca indicada. Para
+// Laboratorio no se le pide sucursal al usuario: siempre se usa la misma
+// sucursal ficticia fija (el gasto de Laboratorio no se reparte por clinica).
+function sucursalValidaParaMarca(sucursal, marca) {
+  if (marca === 'laboratorio') return sucursal === SUCURSAL_LABORATORIO;
+  if (marca === 'tomox') return TOMOX_SUCURSALES.includes(sucursal) && sucursalesDb.existeActiva(sucursal);
+  return sucursalesDb.existeActiva(sucursal);
+}
+
+function normalizarMarcaYSucursal(body) {
+  const marca = MARCAS.includes(body.marca) ? body.marca : 'dazujo';
+  if (marca === 'laboratorio') body.sucursal = SUCURSAL_LABORATORIO;
+  return marca;
+}
+
+function validarGasto(body, marca) {
   const requeridos = ['sucursal', 'tipo_gasto', 'concepto', 'fecha', 'monto'];
   for (const campo of requeridos) {
     if (body[campo] === undefined || body[campo] === null || body[campo] === '') {
       return `Falta el campo: ${campo}`;
     }
   }
-  if (!SUCURSALES.includes(body.sucursal)) return 'Sucursal invalida';
+  if (!sucursalValidaParaMarca(body.sucursal, marca)) return 'Sucursal invalida';
   if (!TIPOS_GASTO.includes(body.tipo_gasto)) return 'Tipo de gasto invalido';
   if (Number.isNaN(Number(body.monto))) return 'El monto debe ser un numero';
   return null;
@@ -81,55 +88,6 @@ router.get('/', (req, res) => {
   res.json(gastos);
 });
 
-const MARCA_IMPORTADO = 'Importado de Excel (histórico)';
-
-router.post('/importar', uploadExcel.single('archivo'), manejarErrorMulter, async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Falta el archivo' });
-
-  let resultado;
-  try {
-    resultado = await procesarArchivo(req.file.buffer, req.file.originalname);
-  } catch (err) {
-    return res.status(400).json({ error: err.message || 'No se pudo leer el archivo' });
-  }
-
-  const { mes, ingresos, gastos, sinMapear } = resultado;
-
-  const delIngreso = db.prepare('DELETE FROM ingresos WHERE sucursal = ? AND mes = ?');
-  const insIngreso = db.prepare('INSERT INTO ingresos (sucursal, mes, monto) VALUES (?, ?, ?)');
-  const vistosIngreso = new Set();
-  for (const i of ingresos) {
-    if (!vistosIngreso.has(i.sucursal)) {
-      delIngreso.run(i.sucursal, mes);
-      vistosIngreso.add(i.sucursal);
-    }
-    insIngreso.run(i.sucursal, mes, i.monto);
-  }
-
-  const delGasto = db.prepare('DELETE FROM gastos WHERE sucursal = ? AND substr(fecha,1,7) = ? AND concepto = ?');
-  const insGasto = db.prepare('INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto) VALUES (?, ?, ?, ?, ?)');
-  const vistosGasto = new Set();
-  for (const g of gastos) {
-    if (!vistosGasto.has(g.sucursal)) {
-      delGasto.run(g.sucursal, mes, MARCA_IMPORTADO);
-      vistosGasto.add(g.sucursal);
-    }
-    insGasto.run(g.sucursal, g.tipo_gasto, MARCA_IMPORTADO, `${mes}-01`, g.monto);
-  }
-
-  const totalesGastoPorSucursal = {};
-  for (const g of gastos) {
-    totalesGastoPorSucursal[g.sucursal] = (totalesGastoPorSucursal[g.sucursal] || 0) + g.monto;
-  }
-
-  res.json({
-    mes,
-    ingresos: ingresos.map((i) => ({ sucursal: i.sucursal, monto: i.monto })),
-    gastos: Object.entries(totalesGastoPorSucursal).map(([sucursal, monto]) => ({ sucursal, monto: Math.round(monto * 100) / 100 })),
-    sinMapear,
-  });
-});
-
 router.get('/comprobante/:archivo', (req, res) => {
   const existe = db.prepare('SELECT id FROM gastos WHERE comprobante = ?').get(req.params.archivo);
   if (!existe) return res.status(404).json({ error: 'No encontrado' });
@@ -137,7 +95,8 @@ router.get('/comprobante/:archivo', (req, res) => {
 });
 
 router.post('/', upload.single('comprobante'), manejarErrorMulter, (req, res) => {
-  const error = validarGasto(req.body);
+  const marca = normalizarMarcaYSucursal(req.body);
+  const error = validarGasto(req.body, marca);
   if (error) {
     borrarComprobante(req.file?.filename);
     return res.status(400).json({ error });
@@ -146,36 +105,51 @@ router.post('/', upload.single('comprobante'), manejarErrorMulter, (req, res) =>
   const { sucursal, tipo_gasto, concepto, fecha, monto } = req.body;
   const info = db
     .prepare(
-      `INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, comprobante)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, comprobante, marca)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(sucursal, tipo_gasto, concepto, fecha, Number(monto), req.file?.filename || null);
+    .run(sucursal, tipo_gasto, concepto, fecha, Number(monto), req.file?.filename || null, marca);
 
   const nuevo = db.prepare('SELECT * FROM gastos WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(nuevo);
 });
 
+const MODOS_DIVISION = ['igual', 'cantidad', 'porcentaje'];
+
 router.post('/compartido', upload.single('comprobante'), manejarErrorMulter, (req, res) => {
-  const { tipo_gasto, concepto, fecha, monto } = req.body;
-  let sucursales = req.body.sucursales;
-  if (typeof sucursales === 'string') {
+  const { tipo_gasto, concepto, fecha } = req.body;
+  const modo = req.body.modo || 'igual';
+  const marca = MARCAS.includes(req.body.marca) ? req.body.marca : 'dazujo';
+
+  let partes = req.body.partes;
+  if (typeof partes === 'string') {
     try {
-      sucursales = JSON.parse(sucursales);
+      partes = JSON.parse(partes);
     } catch {
-      sucursales = [];
+      partes = [];
     }
   }
 
-  if (!Array.isArray(sucursales) || sucursales.length < 2) {
+  if (marca === 'laboratorio') {
+    borrarComprobante(req.file?.filename);
+    return res.status(400).json({ error: 'Laboratorio no admite gastos divididos por sucursal' });
+  }
+  if (!MODOS_DIVISION.includes(modo)) {
+    borrarComprobante(req.file?.filename);
+    return res.status(400).json({ error: 'Modo de division invalido' });
+  }
+  if (!Array.isArray(partes) || partes.length < 2) {
     borrarComprobante(req.file?.filename);
     return res.status(400).json({ error: 'Selecciona al menos 2 sucursales' });
   }
-  if (new Set(sucursales).size !== sucursales.length) {
+
+  const nombresSucursales = partes.map((p) => p && p.sucursal);
+  if (new Set(nombresSucursales).size !== nombresSucursales.length) {
     borrarComprobante(req.file?.filename);
     return res.status(400).json({ error: 'No repitas la misma sucursal' });
   }
-  for (const s of sucursales) {
-    if (!SUCURSALES.includes(s)) {
+  for (const nombre of nombresSucursales) {
+    if (!sucursalValidaParaMarca(nombre, marca)) {
       borrarComprobante(req.file?.filename);
       return res.status(400).json({ error: 'Sucursal invalida' });
     }
@@ -193,25 +167,59 @@ router.post('/compartido', upload.single('comprobante'), manejarErrorMulter, (re
     return res.status(400).json({ error: 'Falta el campo: fecha' });
   }
 
-  const montoTotal = Number(monto);
-  if (Number.isNaN(montoTotal) || montoTotal <= 0) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'El monto debe ser un numero mayor a 0' });
-  }
+  let filasMonto;
+  let montoTotal;
 
-  const n = sucursales.length;
-  const montoBase = Math.floor((montoTotal / n) * 100) / 100;
-  const ajusteFinal = Math.round((montoTotal - montoBase * (n - 1)) * 100) / 100;
+  if (modo === 'igual') {
+    montoTotal = Number(req.body.monto);
+    if (Number.isNaN(montoTotal) || montoTotal <= 0) {
+      borrarComprobante(req.file?.filename);
+      return res.status(400).json({ error: 'El monto debe ser un numero mayor a 0' });
+    }
+
+    const n = partes.length;
+    const montoBase = Math.floor((montoTotal / n) * 100) / 100;
+    const ajusteFinal = Math.round((montoTotal - montoBase * (n - 1)) * 100) / 100;
+    filasMonto = partes.map((p, i) => ({ sucursal: p.sucursal, monto: i === n - 1 ? ajusteFinal : montoBase }));
+  } else if (modo === 'cantidad') {
+    filasMonto = partes.map((p) => ({ sucursal: p.sucursal, monto: Math.round(Number(p.valor) * 100) / 100 }));
+    if (filasMonto.some((f) => Number.isNaN(f.monto) || f.monto <= 0)) {
+      borrarComprobante(req.file?.filename);
+      return res.status(400).json({ error: 'Cada clinica necesita una cantidad valida mayor a 0' });
+    }
+    montoTotal = Math.round(filasMonto.reduce((s, f) => s + f.monto, 0) * 100) / 100;
+  } else {
+    montoTotal = Number(req.body.monto);
+    if (Number.isNaN(montoTotal) || montoTotal <= 0) {
+      borrarComprobante(req.file?.filename);
+      return res.status(400).json({ error: 'El monto debe ser un numero mayor a 0' });
+    }
+
+    const porcentajes = partes.map((p) => Number(p.valor));
+    if (porcentajes.some((p) => Number.isNaN(p) || p <= 0)) {
+      borrarComprobante(req.file?.filename);
+      return res.status(400).json({ error: 'Cada clinica necesita un porcentaje valido mayor a 0' });
+    }
+    const sumaPct = porcentajes.reduce((s, p) => s + p, 0);
+    if (Math.abs(sumaPct - 100) > 0.5) {
+      borrarComprobante(req.file?.filename);
+      return res.status(400).json({ error: `Los porcentajes deben sumar 100% (suman ${sumaPct.toFixed(1)}%)` });
+    }
+
+    filasMonto = partes.map((p) => ({ sucursal: p.sucursal, monto: Math.round(montoTotal * (Number(p.valor) / 100) * 100) / 100 }));
+    // La ultima fila absorbe el redondeo para que la suma cuadre exacto con el total.
+    const sumaParcial = filasMonto.slice(0, -1).reduce((s, f) => s + f.monto, 0);
+    filasMonto[filasMonto.length - 1].monto = Math.round((montoTotal - sumaParcial) * 100) / 100;
+  }
 
   const grupoId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const insert = db.prepare(
-    `INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, grupo_id, monto_total, comprobante)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, grupo_id, monto_total, comprobante, marca)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
-  const creados = sucursales.map((sucursal, i) => {
-    const montoFila = i === n - 1 ? ajusteFinal : montoBase;
-    const info = insert.run(sucursal, tipo_gasto, concepto, fecha, montoFila, grupoId, montoTotal, req.file?.filename || null);
+  const creados = filasMonto.map((f) => {
+    const info = insert.run(f.sucursal, tipo_gasto, concepto, fecha, f.monto, grupoId, montoTotal, req.file?.filename || null, marca);
     return db.prepare('SELECT * FROM gastos WHERE id = ?').get(info.lastInsertRowid);
   });
 
@@ -252,14 +260,49 @@ router.delete('/:id', (req, res) => {
   res.status(204).end();
 });
 
+function gastosFiltrados(query) {
+  const condiciones = [];
+  const parametros = [];
+
+  if (query.sucursal) {
+    condiciones.push('sucursal = ?');
+    parametros.push(query.sucursal);
+  }
+  if (query.mes && /^\d{2}$/.test(query.mes)) {
+    condiciones.push("substr(fecha, 6, 2) = ?");
+    parametros.push(query.mes);
+  }
+  if (query.anio && /^\d{4}$/.test(query.anio)) {
+    condiciones.push("substr(fecha, 1, 4) = ?");
+    parametros.push(query.anio);
+  }
+  if (query.marca && MARCAS.includes(query.marca)) {
+    condiciones.push('marca = ?');
+    parametros.push(query.marca);
+  }
+
+  const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+  return db.prepare(`SELECT * FROM gastos ${where} ORDER BY fecha DESC, id DESC`).all(...parametros);
+}
+
+function nombreArchivoExport(query) {
+  const partes = ['gastos', query.marca, query.sucursal, query.anio, query.mes].filter(Boolean);
+  return partes.join('_');
+}
+
+function conFilaTotal(filas) {
+  const suma = Math.round(filas.reduce((s, f) => s + f.monto, 0) * 100) / 100;
+  return [...filas, { marca: '', sucursal: '', tipo_gasto: '', concepto: 'TOTAL', fecha: '', monto: suma, compartido: '', monto_total: '' }];
+}
+
 router.get('/export/csv', (req, res) => {
-  const gastos = db.prepare('SELECT * FROM gastos ORDER BY fecha DESC, id DESC').all();
-  enviarCSV(res, 'gastos', COLUMNAS, paraExportar(gastos));
+  const gastos = gastosFiltrados(req.query);
+  enviarCSV(res, nombreArchivoExport(req.query), COLUMNAS, conFilaTotal(paraExportar(gastos)));
 });
 
 router.get('/export/xlsx', async (req, res) => {
-  const gastos = db.prepare('SELECT * FROM gastos ORDER BY fecha DESC, id DESC').all();
-  await enviarXLSX(res, 'gastos', 'Gastos', COLUMNAS, paraExportar(gastos));
+  const gastos = gastosFiltrados(req.query);
+  await enviarXLSX(res, nombreArchivoExport(req.query), 'Gastos', COLUMNAS, conFilaTotal(paraExportar(gastos)));
 });
 
 module.exports = router;

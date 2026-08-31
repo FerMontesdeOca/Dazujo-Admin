@@ -13,11 +13,12 @@
   <header>
     <div class="header-inner">
       <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <select id="marca-selector" class="marca-selector-header" aria-label="Marca"></select>
       <nav class="nav">
-        <a href="index.html">Cuentas por Pagar</a>
+        <a href="index.html" data-marca-dazujo-only>Cuentas por Pagar</a>
         <a href="gastos.html" class="active">Gastos</a>
         <a href="cierre.html">Cierre de Mes</a>
-        <a href="proyeccion.html">Proyeccion Mensual</a>
+        <a href="proyeccion.html" data-marca-dazujo-only>Proyeccion Mensual</a>
         <a href="usuarios.html" data-admin-only>Usuarios</a>
       </nav>
       <div class="user-box">
@@ -28,23 +29,6 @@
   </header>
 
   <main>
-    <section class="card">
-      <h2>Importar cierre de mes (Excel)</h2>
-      <p class="hint">Sube el archivo mensual de cierre. El mes se toma del nombre del archivo (ej. "Cierre de mes Diciembre"); se importan todos los gastos del mes y, si el archivo tambien trae ingresos, solo se toma el ingreso de ese mismo mes por clinica.</p>
-      <form id="importar-form">
-        <div class="grid">
-          <label>
-            Archivo Excel (.xlsx)
-            <input type="file" id="importar-archivo" accept=".xlsx" required />
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" id="importar-btn">Importar</button>
-        </div>
-      </form>
-      <div id="importar-resultado"></div>
-    </section>
-
     <section class="card">
       <h2 id="form-title">Nuevo gasto</h2>
       <form id="gasto-form">
@@ -58,8 +42,16 @@
             Sucursal
             <select id="sucursal" required></select>
           </label>
+          <label id="modo-compartido-wrap" hidden>
+            Como dividir
+            <select id="modo-compartido">
+              <option value="igual">Partes iguales</option>
+              <option value="cantidad">Cantidad</option>
+              <option value="porcentaje">Porcentaje</option>
+            </select>
+          </label>
           <label id="sucursales-compartido-wrap" hidden>
-            Clinicas que comparten el gasto
+            <span id="sucursales-compartido-label">Clinicas que comparten el gasto</span>
             <div id="sucursales-compartido" class="checkbox-grid"></div>
           </label>
           <label>
@@ -74,7 +66,7 @@
             Fecha
             <input type="date" id="fecha" required />
           </label>
-          <label>
+          <label id="monto-wrap">
             <span id="monto-label">Monto</span>
             <input type="number" id="monto" step="0.01" min="0" required />
           </label>
@@ -98,8 +90,14 @@
           <select id="filtro-sucursal">
             <option value="">Todas las sucursales</option>
           </select>
-          <a href="/api/gastos/export/csv" class="button">Exportar CSV</a>
-          <a href="/api/gastos/export/xlsx" class="button">Exportar Excel</a>
+          <select id="filtro-mes">
+            <option value="">Todos los meses</option>
+          </select>
+          <select id="filtro-anio">
+            <option value="">Todos los años</option>
+          </select>
+          <a href="/api/gastos/export/csv" id="export-csv" class="button">Exportar CSV</a>
+          <a href="/api/gastos/export/xlsx" id="export-xlsx" class="button">Exportar Excel</a>
         </div>
       </div>
       <div class="table-wrapper">
@@ -128,6 +126,7 @@
   </main>
 
   <script src="auth.js"></script>
+  <script src="marca.js"></script>
   <script src="gastos.js"></script>
 </body>
 </html>

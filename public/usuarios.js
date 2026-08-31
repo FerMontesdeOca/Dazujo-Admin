@@ -98,6 +98,75 @@ form.addEventListener('submit', async (e) => {
   cargarUsuarios();
 });
 
+const sucursalForm = document.getElementById('sucursal-form');
+const tablaSucursalesBody = document.getElementById('tabla-sucursales-body');
+
+async function cargarSucursales() {
+  const res = await fetch('/api/sucursales');
+  if (!res.ok) return;
+  const sucursales = await res.json();
+  renderTablaSucursales(sucursales);
+}
+
+function renderTablaSucursales(sucursales) {
+  tablaSucursalesBody.innerHTML = '';
+  sucursales.forEach((s) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(s.nombre)}</td>
+      <td>${s.activa ? 'Activa' : 'De baja'}</td>
+      <td class="acciones-cell"></td>
+    `;
+
+    const celdaAcciones = tr.querySelector('.acciones-cell');
+    const btnEstado = document.createElement('button');
+    btnEstado.className = 'small secondary';
+    btnEstado.textContent = s.activa ? 'Dar de baja' : 'Reactivar';
+    btnEstado.onclick = () => cambiarEstadoSucursal(s);
+    celdaAcciones.appendChild(btnEstado);
+
+    tablaSucursalesBody.appendChild(tr);
+  });
+}
+
+async function cambiarEstadoSucursal(s) {
+  if (s.activa && !confirm(`¿Dar de baja "${s.nombre}"? Lo ya registrado se conserva, pero dejara de aparecer para nuevos registros.`)) {
+    return;
+  }
+
+  const res = await fetch(`/api/sucursales/${s.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ activa: !s.activa }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'No se pudo actualizar la sucursal.');
+    return;
+  }
+  cargarSucursales();
+}
+
+sucursalForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nombre = document.getElementById('sucursal-nombre').value.trim();
+
+  const res = await fetch('/api/sucursales', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    alert(data.error || 'No se pudo agregar la sucursal.');
+    return;
+  }
+
+  sucursalForm.reset();
+  cargarSucursales();
+});
+
 requireAuth().then((user) => {
   if (!user) return;
   if (!user.is_admin) {
@@ -105,4 +174,5 @@ requireAuth().then((user) => {
     return;
   }
   cargarUsuarios();
+  cargarSucursales();
 });

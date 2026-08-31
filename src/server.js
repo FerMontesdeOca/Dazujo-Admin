@@ -9,7 +9,9 @@ const cierreRouter = require('./routes/cierre');
 const proyeccionRouter = require('./routes/proyeccion');
 const authRouter = require('./routes/auth');
 const usuariosRouter = require('./routes/usuarios');
-const { SUCURSALES, TIPOS_GASTO, METAS_MENSUALES } = require('./constants');
+const sucursalesRouter = require('./routes/sucursales');
+const { TIPOS_GASTO, METAS_MENSUALES, TOMOX_SUCURSALES, SUCURSAL_LABORATORIO } = require('./constants');
+const sucursales = require('./sucursales');
 const { requireAuth, requireAdmin } = require('./auth');
 const { iniciarCron } = require('./cron');
 
@@ -40,7 +42,13 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api', authRouter);
 
 app.get('/api/config', requireAuth, (req, res) => {
-  res.json({ sucursales: SUCURSALES, tiposGasto: TIPOS_GASTO, metasMensuales: METAS_MENSUALES });
+  res.json({
+    sucursales: sucursales.listarActivas(),
+    tiposGasto: TIPOS_GASTO,
+    metasMensuales: METAS_MENSUALES,
+    tomoxSucursales: TOMOX_SUCURSALES,
+    sucursalLaboratorio: SUCURSAL_LABORATORIO,
+  });
 });
 
 app.use('/api/cuentas', requireAuth, cuentasRouter);
@@ -49,6 +57,7 @@ app.use('/api/ingresos', requireAuth, ingresosRouter);
 app.use('/api/cierre', requireAuth, cierreRouter);
 app.use('/api/proyeccion', requireAuth, proyeccionRouter);
 app.use('/api/usuarios', requireAuth, requireAdmin, usuariosRouter);
+app.use('/api/sucursales', requireAuth, requireAdmin, sucursalesRouter);
 
 app.listen(PORT, () => {
   console.log(`Servidor de Dazujo corriendo en http://localhost:${PORT}`);

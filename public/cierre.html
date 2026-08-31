@@ -14,11 +14,12 @@
   <header>
     <div class="header-inner">
       <img src="assets/logo_dazujo_azul.png" alt="Dazujo" class="logo" />
+      <select id="marca-selector" class="marca-selector-header" aria-label="Marca"></select>
       <nav class="nav">
-        <a href="index.html">Cuentas por Pagar</a>
+        <a href="index.html" data-marca-dazujo-only>Cuentas por Pagar</a>
         <a href="gastos.html">Gastos</a>
         <a href="cierre.html" class="active">Cierre de Mes</a>
-        <a href="proyeccion.html">Proyeccion Mensual</a>
+        <a href="proyeccion.html" data-marca-dazujo-only>Proyeccion Mensual</a>
         <a href="usuarios.html" data-admin-only>Usuarios</a>
       </nav>
       <div class="user-box">
@@ -29,6 +30,23 @@
   </header>
 
   <main>
+    <section class="card" data-marca-dazujo-only>
+      <h2>Importar corte final del mes</h2>
+      <p class="hint">Sube el corte de caja de una clinica (.xls o .xlsx). Se toma la sucursal del titulo del archivo ("CORTE DE CAJA ...") y se registra como ingreso el total de la primera tabla, en el mes de las fechas de pago que trae el archivo.</p>
+      <form id="importar-corte-form">
+        <div class="grid">
+          <label>
+            Archivo del corte
+            <input type="file" id="importar-corte-archivo" accept=".xls,.xlsx" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="importar-corte-btn">Importar</button>
+        </div>
+      </form>
+      <div id="importar-corte-resultado"></div>
+    </section>
+
     <section class="card">
       <div class="toolbar">
         <h2>Tablero del cierre</h2>
@@ -95,8 +113,8 @@
 
     <section class="card">
       <h2>Comparar</h2>
-      <div class="comparar-modo-row">
-        <label class="checkbox-label">
+      <div class="comparar-modo-row" id="comparar-modo-row">
+        <label class="checkbox-label" id="modo-clinicas-wrap">
           <input type="radio" name="modo-comparar" id="modo-clinicas" checked />
           Clinica vs clinica
         </label>
@@ -152,7 +170,7 @@
       </div>
     </section>
 
-    <section class="card">
+    <section class="card" id="seccion-ingreso">
       <h2>Registrar ingreso mensual</h2>
       <form id="ingreso-form">
         <div class="grid">
@@ -201,6 +219,7 @@
   </main>
 
   <script src="auth.js"></script>
+  <script src="marca.js"></script>
   <script src="mesSelector.js"></script>
   <script src="cierre.js"></script>
 </body>

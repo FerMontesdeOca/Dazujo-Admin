@@ -30,6 +30,18 @@ for (const columna of ['aviso_7_enviado', 'aviso_3_enviado', 'aviso_1_enviado'])
     db.exec(`ALTER TABLE cuentas_por_pagar ADD COLUMN ${columna} INTEGER NOT NULL DEFAULT 0`);
   }
 }
+if (!columnasCuentas.includes('sucursal')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN sucursal TEXT');
+}
+if (!columnasCuentas.includes('tipo_gasto')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN tipo_gasto TEXT');
+}
+if (!columnasCuentas.includes('es_fijo')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN es_fijo INTEGER NOT NULL DEFAULT 0');
+}
+if (!columnasCuentas.includes('gasto_id')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN gasto_id INTEGER');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS gastos (
@@ -56,6 +68,9 @@ if (!columnasGastos.includes('monto_total')) {
 }
 if (!columnasGastos.includes('comprobante')) {
   db.exec('ALTER TABLE gastos ADD COLUMN comprobante TEXT');
+}
+if (!columnasGastos.includes('marca')) {
+  db.exec("ALTER TABLE gastos ADD COLUMN marca TEXT NOT NULL DEFAULT 'dazujo'");
 }
 
 db.exec(`
@@ -94,6 +109,27 @@ if (indicesIngresos.some((idx) => idx.unique)) {
 const columnasIngresos = db.prepare('PRAGMA table_info(ingresos)').all().map((c) => c.name);
 if (!columnasIngresos.includes('concepto')) {
   db.exec('ALTER TABLE ingresos ADD COLUMN concepto TEXT');
+}
+if (!columnasIngresos.includes('marca')) {
+  db.exec("ALTER TABLE ingresos ADD COLUMN marca TEXT NOT NULL DEFAULT 'dazujo'");
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sucursales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL UNIQUE,
+    activa INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+// Siembra sucursales nuevas que aparezcan en SUCURSALES_INICIALES pero que
+// todavia no existan en la base de datos (INSERT OR IGNORE es seguro correrlo
+// en cada arranque: no duplica ni reactiva una sucursal que se dio de baja).
+const { SUCURSALES_INICIALES } = require('./constants');
+const sembrarSucursal = db.prepare('INSERT OR IGNORE INTO sucursales (nombre) VALUES (?)');
+for (const nombre of SUCURSALES_INICIALES) {
+  sembrarSucursal.run(nombre);
 }
 
 db.exec(`
