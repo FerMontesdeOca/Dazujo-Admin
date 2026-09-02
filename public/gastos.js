@@ -10,6 +10,9 @@ const exportCsvLink = document.getElementById('export-csv');
 const exportXlsxLink = document.getElementById('export-xlsx');
 const selectSucursal = document.getElementById('sucursal');
 const selectTipoGasto = document.getElementById('tipo_gasto');
+const tipoGastoSelectWrap = document.getElementById('tipo-gasto-select-wrap');
+const tipoGastoTextoWrap = document.getElementById('tipo-gasto-texto-wrap');
+const tipoGastoTexto = document.getElementById('tipo_gasto_texto');
 const esCompartido = document.getElementById('es-compartido');
 const compartidoToggleWrap = document.getElementById('compartido-toggle-wrap');
 const sucursalWrap = document.getElementById('sucursal-wrap');
@@ -68,9 +71,20 @@ function sucursalesParaMarca() {
   return sucursalesTodas;
 }
 
+// Dazujo usa el catalogo fijo de tipos de gasto; Tomox y Laboratorio lo
+// escriben libremente (no comparten ese catalogo).
+function tipoGastoLibre() {
+  return marcaActual() !== 'dazujo';
+}
+
+function valorTipoGasto() {
+  return tipoGastoLibre() ? tipoGastoTexto.value.trim() : selectTipoGasto.value;
+}
+
 function actualizarUIporMarca() {
   sucursalesDisponibles = sucursalesParaMarca();
   const esLaboratorio = marcaActual() === 'laboratorio';
+  const libre = tipoGastoLibre();
 
   selectSucursal.innerHTML = sucursalesDisponibles.map((s) => `<option value="${s}">${s}</option>`).join('');
   filtroSucursal.innerHTML =
@@ -79,6 +93,11 @@ function actualizarUIporMarca() {
 
   if (esLaboratorio) esCompartido.checked = false;
   compartidoToggleWrap.hidden = esLaboratorio;
+
+  tipoGastoSelectWrap.hidden = libre;
+  tipoGastoTextoWrap.hidden = !libre;
+  selectTipoGasto.required = !libre;
+  tipoGastoTexto.required = libre;
 
   renderSucursalesCompartido();
   actualizarModoCompartido();
@@ -257,7 +276,11 @@ function cargarEnFormulario(g) {
   compartidoToggleWrap.hidden = true;
   actualizarModoCompartido();
   selectSucursal.value = g.sucursal;
-  selectTipoGasto.value = g.tipo_gasto;
+  if (tipoGastoLibre()) {
+    tipoGastoTexto.value = g.tipo_gasto;
+  } else {
+    selectTipoGasto.value = g.tipo_gasto;
+  }
   document.getElementById('concepto').value = g.concepto;
   document.getElementById('fecha').value = g.fecha;
   document.getElementById('monto').value = g.monto;
@@ -299,7 +322,7 @@ form.addEventListener('submit', async (e) => {
   let url = id ? `/api/gastos/${id}` : '/api/gastos';
   const method = id ? 'PUT' : 'POST';
   const datos = new FormData();
-  datos.set('tipo_gasto', selectTipoGasto.value);
+  datos.set('tipo_gasto', valorTipoGasto());
   datos.set('concepto', document.getElementById('concepto').value.trim());
   datos.set('fecha', document.getElementById('fecha').value);
   datos.set('monto', document.getElementById('monto').value);

@@ -65,6 +65,13 @@ function normalizarMarcaYSucursal(body) {
   return marca;
 }
 
+// Dazujo usa el catalogo fijo de TIPOS_GASTO; Tomox y Laboratorio lo escriben
+// libremente (no comparten ese catalogo con Dazujo).
+function tipoGastoValidoParaMarca(tipoGasto, marca) {
+  if (marca === 'dazujo') return TIPOS_GASTO.includes(tipoGasto);
+  return typeof tipoGasto === 'string' && tipoGasto.trim().length > 0;
+}
+
 function validarGasto(body, marca) {
   const requeridos = ['sucursal', 'tipo_gasto', 'concepto', 'fecha', 'monto'];
   for (const campo of requeridos) {
@@ -73,7 +80,7 @@ function validarGasto(body, marca) {
     }
   }
   if (!sucursalValidaParaMarca(body.sucursal, marca)) return 'Sucursal invalida';
-  if (!TIPOS_GASTO.includes(body.tipo_gasto)) return 'Tipo de gasto invalido';
+  if (!tipoGastoValidoParaMarca(body.tipo_gasto, marca)) return 'Tipo de gasto invalido';
   if (Number.isNaN(Number(body.monto))) return 'El monto debe ser un numero';
   return null;
 }
@@ -154,7 +161,7 @@ router.post('/compartido', upload.single('comprobante'), manejarErrorMulter, (re
       return res.status(400).json({ error: 'Sucursal invalida' });
     }
   }
-  if (!tipo_gasto || !TIPOS_GASTO.includes(tipo_gasto)) {
+  if (!tipoGastoValidoParaMarca(tipo_gasto, marca)) {
     borrarComprobante(req.file?.filename);
     return res.status(400).json({ error: 'Tipo de gasto invalido' });
   }
