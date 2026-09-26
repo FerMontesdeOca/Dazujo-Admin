@@ -42,29 +42,8 @@ function repartoDeCuenta(cuenta) {
   return resultado.error ? null : resultado.filas;
 }
 
-// Sucursales de una cuenta dividida que ya pagaron su parte. Las cuentas
-// pagadas antes de que existiera el pago por clinica cuentan como pagadas completas.
-function partesPagadasDeCuenta(cuenta) {
-  const reparto = repartoDeCuenta(cuenta);
-  if (!reparto) return [];
-  if (cuenta.partes_pagadas) {
-    try {
-      const pagadas = JSON.parse(cuenta.partes_pagadas);
-      return reparto.map((f) => f.sucursal).filter((s) => pagadas.includes(s));
-    } catch {
-      return [];
-    }
-  }
-  return cuenta.pagada ? reparto.map((f) => f.sucursal) : [];
-}
-
 function conReparto(cuenta) {
-  return {
-    ...cuenta,
-    division: leerDivision(cuenta),
-    reparto: repartoDeCuenta(cuenta),
-    partes_pagadas: partesPagadasDeCuenta(cuenta),
-  };
+  return { ...cuenta, division: leerDivision(cuenta), reparto: repartoDeCuenta(cuenta) };
 }
 
 // Valida la division que manda el formulario. Regresa { error } o
@@ -104,36 +83,20 @@ function mesSiguienteFecha(fechaISO) {
   return d.toISOString().slice(0, 10);
 }
 
-// Deja en gastos exactamente un renglon por cada clinica pagada de una cuenta
-// dividida: crea los de clinicas recien pagadas, borra solo los de clinicas
-// que se desmarcaron y actualiza el resto (sin tocar su comprobante).
-// Regresa el grupo_id de esos gastos (null si no quedo ninguna clinica pagada).
-function sincronizarPagosDivididos(cuenta, grupoIdActual, pagadas) {
+// Registra el gasto de una cuenta pagada. Si la cuenta esta dividida se crea un
+// gasto compartido (un renglon por clinica) y se regresa su grupo_id.
+function registrarGastoDeCuenta(cuenta) {
   const reparto = repartoDeCuenta(cuenta);
-  const grupoId = grupoIdActual || nuevoGrupoId();
-  const existentes = db.prepare('SELECT id, sucursal FROM gastos WHERE grupo_id = ?').all(grupoId);
+  if (!reparto) return { gastoId: crearGastoDesdeCuenta(cuenta), grupoId: null };
 
-  for (const g of existentes) {
-    const parte = reparto.find((f) => f.sucursal === g.sucursal);
-    if (!parte || !pagadas.includes(g.sucursal)) {
-      db.prepare('DELETE FROM gastos WHERE id = ?').run(g.id);
-    } else {
-      db.prepare('UPDATE gastos SET tipo_gasto = ?, concepto = ?, fecha = ?, monto = ?, monto_total = ? WHERE id = ?').run(
-        cuenta.tipo_gasto, cuenta.concepto, cuenta.fecha_vencimiento, parte.monto, cuenta.monto, g.id
-      );
-    }
-  }
-
+  const grupoId = nuevoGrupoId();
   const insert = db.prepare(
     'INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, grupo_id, monto_total) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
   for (const f of reparto) {
-    if (pagadas.includes(f.sucursal) && !existentes.some((g) => g.sucursal === f.sucursal)) {
-      insert.run(f.sucursal, cuenta.tipo_gasto, cuenta.concepto, cuenta.fecha_vencimiento, f.monto, grupoId, cuenta.monto);
-    }
+    insert.run(f.sucursal, cuenta.tipo_gasto, cuenta.concepto, cuenta.fecha_vencimiento, f.monto, grupoId, cuenta.monto);
   }
-
-  return pagadas.length ? grupoId : null;
+  return { gastoId: null, grupoId };
 }
 
 function eliminarGastosDeCuenta(gastoId, grupoId) {
@@ -164,12 +127,6 @@ function eliminarGastoSiExiste(gastoId) {
 }
 
 function crearSiguienteFija(cuenta) {
-  // Si se desmarca y se vuelve a pagar, la del siguiente mes ya existe: no se duplica.
-  const yaExiste = db
-    .prepare('SELECT id FROM cuentas_por_pagar WHERE es_fijo = 1 AND proveedor = ? AND concepto = ? AND fecha_vencimiento = ?')
-    .get(cuenta.proveedor, cuenta.concepto, mesSiguienteFecha(cuenta.fecha_vencimiento));
-  if (yaExiste) return;
-
   db.prepare(
     `INSERT INTO cuentas_por_pagar (proveedor, concepto, numero_factura, fecha_emision, fecha_vencimiento, monto, sucursal, tipo_gasto, es_fijo, division)
      VALUES (?, ?, '', ?, ?, ?, ?, ?, 1, ?)`
@@ -249,59 +206,34 @@ router.put('/:id', (req, res) => {
   const cuentaActualizada = { proveedor, concepto, fecha_emision, fecha_vencimiento, monto, sucursal, tipo_gasto, division };
   let gastoId = existente.gasto_id;
   let grupoId = existente.gasto_grupo_id;
-  let pagadaFinal = pagadaNueva;
-  let partesPagadas = null;
 
-  if (division) {
-    // Cuenta dividida: cada clinica paga su parte por separado.
-    const todas = repartoDeCuenta(cuentaActualizada).map((f) => f.sucursal);
-    let deseadas;
-    if (Array.isArray(req.body.partes_pagadas)) deseadas = req.body.partes_pagadas;
-    else if (req.body.pagada !== undefined) deseadas = req.body.pagada ? todas : [];
-    else if (existente.division) deseadas = partesPagadasDeCuenta(existente);
-    else deseadas = existente.pagada ? todas : [];
-    deseadas = todas.filter((s) => deseadas.includes(s));
-
-    // Si antes no estaba dividida, su gasto unico se reemplaza por los de cada clinica.
-    eliminarGastoSiExiste(gastoId);
+  if (!existente.pagada && pagadaNueva) {
+    // Se marca como pagada: se registra automaticamente como gasto.
+    if (!sucursal || !tipo_gasto) {
+      return res.status(400).json({ error: 'Para marcar como pagada, la cuenta necesita sucursal y tipo de gasto' });
+    }
+    ({ gastoId, grupoId } = registrarGastoDeCuenta(cuentaActualizada));
+    if (es_fijo) crearSiguienteFija(cuentaActualizada);
+  } else if (existente.pagada && !pagadaNueva) {
+    // Se regresa a pendiente: se deshace el gasto que se habia registrado.
+    eliminarGastosDeCuenta(gastoId, grupoId);
     gastoId = null;
-    grupoId = sincronizarPagosDivididos(cuentaActualizada, grupoId, deseadas);
-    partesPagadas = JSON.stringify(deseadas);
-    pagadaFinal = deseadas.length === todas.length ? 1 : 0;
-    if (!existente.pagada && pagadaFinal && es_fijo) crearSiguienteFija(cuentaActualizada);
-  } else {
-    let yaPagada = existente.pagada;
-    if (grupoId) {
-      // Se quito la division: se borran los gastos por clinica y, si estaba
-      // pagada completa, se registra de nuevo como un solo gasto.
-      eliminarGastosDeCuenta(null, grupoId);
-      grupoId = null;
-      if (existente.pagada && pagadaNueva) gastoId = crearGastoDesdeCuenta(cuentaActualizada);
-      yaPagada = existente.pagada && pagadaNueva;
-    }
-
-    if (!yaPagada && pagadaNueva) {
-      // Se marca como pagada: se registra automaticamente como gasto.
-      if (!sucursal || !tipo_gasto) {
-        return res.status(400).json({ error: 'Para marcar como pagada, la cuenta necesita sucursal y tipo de gasto' });
-      }
-      gastoId = crearGastoDesdeCuenta(cuentaActualizada);
-      if (es_fijo && !existente.pagada) crearSiguienteFija(cuentaActualizada);
-    } else if (yaPagada && !pagadaNueva) {
-      // Se regresa a pendiente: se deshace el gasto que se habia registrado.
-      eliminarGastoSiExiste(gastoId);
-      gastoId = null;
-    } else if (yaPagada && pagadaNueva && gastoId) {
-      // Sigue pagada pero se edito algun dato: se refleja en el gasto ya creado.
-      actualizarGastoDesdeCuenta(gastoId, cuentaActualizada);
-    }
+    grupoId = null;
+  } else if (existente.pagada && pagadaNueva && (division || grupoId)) {
+    // Sigue pagada pero se edito una cuenta dividida (o que lo estaba): se
+    // rehacen los gastos para que el reparto quede igual que la cuenta.
+    eliminarGastosDeCuenta(gastoId, grupoId);
+    ({ gastoId, grupoId } = registrarGastoDeCuenta(cuentaActualizada));
+  } else if (existente.pagada && pagadaNueva && gastoId) {
+    // Sigue pagada pero se edito algun dato: se refleja en el gasto ya creado.
+    actualizarGastoDesdeCuenta(gastoId, cuentaActualizada);
   }
 
   db.prepare(
     `UPDATE cuentas_por_pagar
-     SET proveedor = ?, concepto = ?, fecha_emision = ?, fecha_vencimiento = ?, monto = ?, pagada = ?, sucursal = ?, tipo_gasto = ?, es_fijo = ?, gasto_id = ?, division = ?, gasto_grupo_id = ?, partes_pagadas = ?
+     SET proveedor = ?, concepto = ?, fecha_emision = ?, fecha_vencimiento = ?, monto = ?, pagada = ?, sucursal = ?, tipo_gasto = ?, es_fijo = ?, gasto_id = ?, division = ?, gasto_grupo_id = ?
      WHERE id = ?`
-  ).run(proveedor, concepto, fecha_emision, fecha_vencimiento, monto, pagadaFinal, sucursal, tipo_gasto, es_fijo, gastoId, division, grupoId, partesPagadas, req.params.id);
+  ).run(proveedor, concepto, fecha_emision, fecha_vencimiento, monto, pagadaNueva, sucursal, tipo_gasto, es_fijo, gastoId, division, grupoId, req.params.id);
 
   const actualizada = db.prepare('SELECT * FROM cuentas_por_pagar WHERE id = ?').get(req.params.id);
   res.json(conReparto(actualizada));
@@ -326,13 +258,9 @@ function paraExportar(cuentas) {
     const reparto = repartoDeCuenta(c);
     return {
       ...c,
-      pagada: c.pagada ? 'Si' : partesPagadasDeCuenta(c).length ? 'Parcial' : 'No',
+      pagada: c.pagada ? 'Si' : 'No',
       es_fijo: c.es_fijo ? 'Si' : 'No',
-      division_texto: reparto
-        ? reparto
-            .map((f) => `${f.sucursal}: ${f.monto.toFixed(2)}${partesPagadasDeCuenta(c).includes(f.sucursal) ? ' (pagada)' : ''}`)
-            .join(', ')
-        : '',
+      division_texto: reparto ? reparto.map((f) => `${f.sucursal}: ${f.monto.toFixed(2)}`).join(', ') : '',
     };
   });
 }

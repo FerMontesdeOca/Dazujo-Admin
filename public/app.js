@@ -20,13 +20,7 @@ const montoWrap = document.getElementById('monto-wrap');
 const montoLabel = document.getElementById('monto-label');
 const inputMonto = document.getElementById('monto');
 
-const pagosDialog = document.getElementById('pagos-dialog');
-const pagosForm = document.getElementById('pagos-form');
-const pagosTitulo = document.getElementById('pagos-titulo');
-const pagosLista = document.getElementById('pagos-lista');
-
 let sucursalesDisponibles = [];
-let cuentaEnPagos = null;
 
 function diasParaVencer(fechaVencimiento) {
   const hoy = new Date();
@@ -143,13 +137,7 @@ modoDivision.addEventListener('change', () => {
 
 function celdaSucursal(c) {
   if (!c.reparto) return escapeHtml(c.sucursal || '-');
-  const detalle = c.reparto
-    .map((f) =>
-      c.partes_pagadas.includes(f.sucursal)
-        ? `<span class="parte-pagada">✓ ${escapeHtml(f.sucursal)}: ${fmtMoneda(f.monto)}</span>`
-        : `${escapeHtml(f.sucursal)}: ${fmtMoneda(f.monto)}`
-    )
-    .join('<br>');
+  const detalle = c.reparto.map((f) => `${escapeHtml(f.sucursal)}: ${fmtMoneda(f.monto)}`).join('<br>');
   return `<span class="badge-compartido">Dividida</span><div class="opcional">${detalle}</div>`;
 }
 
@@ -173,15 +161,7 @@ function renderTabla(cuentas) {
     if (porVencer) proximasAVencer++;
 
     const tr = document.createElement('tr');
-    const parcial = !c.pagada && c.reparto && c.partes_pagadas.length > 0;
-    tr.className = c.pagada ? 'pagada' : vencida ? 'vencida' : parcial ? 'parcial' : '';
-    const estado = c.pagada
-      ? 'Pagada'
-      : parcial
-        ? `Parcial (${c.partes_pagadas.length}/${c.reparto.length})`
-        : vencida
-          ? 'Vencida'
-          : 'Pendiente';
+    tr.className = c.pagada ? 'pagada' : vencida ? 'vencida' : '';
     tr.innerHTML = `
       <td>${escapeHtml(c.proveedor)}</td>
       <td>${escapeHtml(c.concepto)}</td>
@@ -191,7 +171,7 @@ function renderTabla(cuentas) {
       <td>${escapeHtml(c.fecha_vencimiento)}${porVencer ? ' ⚠️' : ''}</td>
       <td>${fmtMoneda(c.monto)}</td>
       <td>${c.es_fijo ? 'Si' : 'No'}</td>
-      <td>${estado}${parcial && vencida ? ' — vencida' : ''}</td>
+      <td>${c.pagada ? 'Pagada' : vencida ? 'Vencida' : 'Pendiente'}</td>
       <td class="acciones-cell"></td>
     `;
 
@@ -199,13 +179,8 @@ function renderTabla(cuentas) {
 
     const btnPagar = document.createElement('button');
     btnPagar.className = 'small secondary';
-    if (c.reparto) {
-      btnPagar.textContent = 'Pagos por clinica';
-      btnPagar.onclick = () => abrirPagos(c);
-    } else {
-      btnPagar.textContent = c.pagada ? 'Marcar pendiente' : 'Marcar pagada';
-      btnPagar.onclick = () => togglePagada(c);
-    }
+    btnPagar.textContent = c.pagada ? 'Marcar pendiente' : 'Marcar pagada';
+    btnPagar.onclick = () => togglePagada(c);
     celdaAcciones.appendChild(btnPagar);
 
     const btnEditar = document.createElement('button');
@@ -275,42 +250,6 @@ async function togglePagada(c) {
   });
   cargarCuentas();
 }
-
-function abrirPagos(c) {
-  cuentaEnPagos = c;
-  pagosTitulo.textContent = `Pagos por clinica — ${c.proveedor}`;
-  pagosLista.innerHTML = '';
-  c.reparto.forEach((f) => {
-    const fila = document.createElement('label');
-    const chk = document.createElement('input');
-    chk.type = 'checkbox';
-    chk.value = f.sucursal;
-    chk.checked = c.partes_pagadas.includes(f.sucursal);
-    const nombre = document.createElement('span');
-    nombre.textContent = f.sucursal;
-    const monto = document.createElement('strong');
-    monto.textContent = fmtMoneda(f.monto);
-    fila.append(chk, nombre, monto);
-    pagosLista.appendChild(fila);
-  });
-  pagosDialog.showModal();
-}
-
-pagosForm.addEventListener('submit', async (e) => {
-  if (e.submitter?.value !== 'guardar' || !cuentaEnPagos) return;
-  const pagadas = [...pagosLista.querySelectorAll('input:checked')].map((chk) => chk.value);
-  const res = await fetch(`/api/cuentas/${cuentaEnPagos.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ partes_pagadas: pagadas }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    alert(data.error || 'Ocurrio un error al guardar los pagos.');
-  }
-  cuentaEnPagos = null;
-  cargarCuentas();
-});
 
 async function eliminarCuenta(id) {
   if (!confirm('¿Eliminar esta cuenta por pagar?')) return;
