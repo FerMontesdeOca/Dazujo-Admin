@@ -1,9 +1,21 @@
 const cron = require('node-cron');
 const db = require('./db');
 const { enviarAvisoVencimiento } = require('./mailer');
-const { enviarWhatsApp, mensajeVencimiento } = require('./whatsapp');
+const { enviarAvisoVencimientoWhatsApp } = require('./whatsapp');
 
 const DIAS_AVISO = Number(process.env.DIAS_AVISO_VENCIMIENTO || 3);
+// Las fechas de vencimiento son fechas de Mexico; el servidor (Railway) corre en UTC.
+const ZONA_HORARIA = process.env.ZONA_HORARIA || 'America/Mexico_City';
+
+// Fecha AAAA-MM-DD en la zona horaria del negocio, desplazada N dias desde hoy.
+function fechaLocal(desplazamientoDias = 0) {
+  const d = new Date(Date.now() + desplazamientoDias * 24 * 60 * 60 * 1000);
+  return d.toLocaleDateString('en-CA', { timeZone: ZONA_HORARIA });
+}
+
+function diasEntre(desde, hasta) {
+  return Math.round((Date.parse(hasta) - Date.parse(desde)) / (24 * 60 * 60 * 1000));
+}
 
 const ETAPAS_WHATSAPP = [
   { dias: 7, columna: 'aviso_7_enviado' },
@@ -12,12 +24,8 @@ const ETAPAS_WHATSAPP = [
 ];
 
 async function revisarVencimientos() {
-  const hoy = new Date();
-  const limite = new Date();
-  limite.setDate(hoy.getDate() + DIAS_AVISO);
-
-  const hoyStr = hoy.toISOString().slice(0, 10);
-  const limiteStr = limite.toISOString().slice(0, 10);
+  const hoyStr = fechaLocal();
+  const limiteStr = fechaLocal(DIAS_AVISO);
 
   const cuentas = db
     .prepare(
@@ -38,38 +46,46 @@ async function revisarVencimientos() {
   }
 }
 
+// Manda el aviso de 7, 3 o 1 dia(s) antes del vencimiento. No depende de que
+// la revision caiga justo ese dia: si una cuenta se dio de alta con menos
+// anticipacion o un dia no corrio la revision, se manda el aviso que toque en
+// cuanto se detecte (uno solo por revision, y sin repetir los ya enviados).
 async function revisarAvisosWhatsApp() {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const hoy = fechaLocal();
+  const etapaMasLarga = Math.max(...ETAPAS_WHATSAPP.map((e) => e.dias));
+  const cuentas = db
+    .prepare(
+      `SELECT * FROM cuentas_por_pagar
+       WHERE pagada = 0 AND fecha_vencimiento BETWEEN ? AND ?`
+    )
+    .all(hoy, fechaLocal(etapaMasLarga));
 
-  for (const etapa of ETAPAS_WHATSAPP) {
-    const objetivo = new Date(hoy);
-    objetivo.setDate(hoy.getDate() + etapa.dias);
-    const objetivoStr = objetivo.toISOString().slice(0, 10);
+  for (const cuenta of cuentas) {
+    const dias = diasEntre(hoy, cuenta.fecha_vencimiento);
+    const pendientes = ETAPAS_WHATSAPP.filter((e) => dias <= e.dias && !cuenta[e.columna]);
+    if (pendientes.length === 0) continue;
 
-    const cuentas = db
-      .prepare(
-        `SELECT * FROM cuentas_por_pagar
-         WHERE pagada = 0 AND fecha_vencimiento = ? AND ${etapa.columna} = 0`
-      )
-      .all(objetivoStr);
-
-    for (const cuenta of cuentas) {
-      const enviado = await enviarWhatsApp(mensajeVencimiento(cuenta, etapa.dias));
-      if (enviado) {
+    const resultados = await enviarAvisoVencimientoWhatsApp(cuenta, dias);
+    if (resultados.some((r) => r.ok)) {
+      // Se marcan tambien las etapas mas largas para no mandar despues un aviso "atrasado".
+      for (const etapa of pendientes) {
         db.prepare(`UPDATE cuentas_por_pagar SET ${etapa.columna} = 1 WHERE id = ?`).run(cuenta.id);
-        console.log(`[cron] Aviso WhatsApp (${etapa.dias}d) enviado para cuenta #${cuenta.id}.`);
       }
+      console.log(`[cron] Aviso WhatsApp enviado para cuenta #${cuenta.id} (vence en ${dias} dia(s)).`);
     }
   }
 }
 
 function iniciarCron() {
-  // Corre todos los dias a las 8:00 am (hora del servidor)
-  cron.schedule('0 8 * * *', () => {
+  const revisar = () => {
     revisarVencimientos().catch((err) => console.error('[cron] Error revisando vencimientos:', err));
     revisarAvisosWhatsApp().catch((err) => console.error('[cron] Error revisando avisos de WhatsApp:', err));
-  });
+  };
+  // Corre todos los dias a las 8:00 am hora de Mexico (no la del servidor).
+  cron.schedule('0 8 * * *', revisar, { timezone: ZONA_HORARIA });
+  // Y una vez al arrancar, por si el servidor estaba apagado o reiniciando a las 8:00.
+  // Los avisos ya enviados no se repiten.
+  setTimeout(revisar, 30 * 1000);
 }
 
 module.exports = { iniciarCron, revisarVencimientos, revisarAvisosWhatsApp };
