@@ -33,6 +33,10 @@
       <h2 id="form-title">Nueva cuenta por pagar</h2>
       <form id="cuenta-form">
         <input type="hidden" id="cuenta-id" />
+        <label class="checkbox-label">
+          <input type="checkbox" id="es-dividida" />
+          Dividir esta cuenta entre varias clinicas
+        </label>
         <div class="grid">
           <label>
             Proveedor
@@ -42,17 +46,29 @@
             Concepto
             <input type="text" id="concepto" required />
           </label>
-          <label>
+          <label id="sucursal-wrap">
             Sucursal
             <select id="sucursal" required></select>
+          </label>
+          <label id="modo-division-wrap" hidden>
+            Como dividir
+            <select id="modo-division">
+              <option value="igual">Partes iguales</option>
+              <option value="cantidad">Cantidad</option>
+              <option value="porcentaje">Porcentaje</option>
+            </select>
+          </label>
+          <label id="sucursales-division-wrap" hidden>
+            <span id="sucursales-division-label">Clinicas que comparten la cuenta</span>
+            <div id="sucursales-division" class="checkbox-grid"></div>
           </label>
           <label>
             Tipo de gasto
             <span class="opcional">(con el que se registrara al pagarse)</span>
             <select id="tipo_gasto" required></select>
           </label>
-          <label>
-            Monto
+          <label id="monto-wrap">
+            <span id="monto-label">Monto</span>
             <input type="number" id="monto" step="0.01" min="0" required />
           </label>
           <label>

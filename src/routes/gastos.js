@@ -7,6 +7,7 @@ const db = require('../db');
 const { enviarCSV, enviarXLSX } = require('../export');
 const { TIPOS_GASTO, MARCAS, TOMOX_SUCURSALES, SUCURSAL_LABORATORIO } = require('../constants');
 const sucursalesDb = require('../sucursales');
+const { calcularDivision, nuevoGrupoId } = require('../division');
 
 const router = express.Router();
 
@@ -121,8 +122,6 @@ router.post('/', upload.single('comprobante'), manejarErrorMulter, (req, res) =>
   res.status(201).json(nuevo);
 });
 
-const MODOS_DIVISION = ['igual', 'cantidad', 'porcentaje'];
-
 router.post('/compartido', upload.single('comprobante'), manejarErrorMulter, (req, res) => {
   const { tipo_gasto, concepto, fecha } = req.body;
   const modo = req.body.modo || 'igual';
@@ -137,89 +136,21 @@ router.post('/compartido', upload.single('comprobante'), manejarErrorMulter, (re
     }
   }
 
-  if (marca === 'laboratorio') {
+  const fallar = (error) => {
     borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Laboratorio no admite gastos divididos por sucursal' });
-  }
-  if (!MODOS_DIVISION.includes(modo)) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Modo de division invalido' });
-  }
-  if (!Array.isArray(partes) || partes.length < 2) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Selecciona al menos 2 sucursales' });
-  }
+    return res.status(400).json({ error });
+  };
 
-  const nombresSucursales = partes.map((p) => p && p.sucursal);
-  if (new Set(nombresSucursales).size !== nombresSucursales.length) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'No repitas la misma sucursal' });
-  }
-  for (const nombre of nombresSucursales) {
-    if (!sucursalValidaParaMarca(nombre, marca)) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: 'Sucursal invalida' });
-    }
-  }
-  if (!tipoGastoValidoParaMarca(tipo_gasto, marca)) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Tipo de gasto invalido' });
-  }
-  if (!concepto) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Falta el campo: concepto' });
-  }
-  if (!fecha) {
-    borrarComprobante(req.file?.filename);
-    return res.status(400).json({ error: 'Falta el campo: fecha' });
-  }
+  if (marca === 'laboratorio') return fallar('Laboratorio no admite gastos divididos por sucursal');
 
-  let filasMonto;
-  let montoTotal;
+  const division = calcularDivision(modo, partes, req.body.monto, (s) => sucursalValidaParaMarca(s, marca));
+  if (division.error) return fallar(division.error);
+  if (!tipoGastoValidoParaMarca(tipo_gasto, marca)) return fallar('Tipo de gasto invalido');
+  if (!concepto) return fallar('Falta el campo: concepto');
+  if (!fecha) return fallar('Falta el campo: fecha');
 
-  if (modo === 'igual') {
-    montoTotal = Number(req.body.monto);
-    if (Number.isNaN(montoTotal) || montoTotal <= 0) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: 'El monto debe ser un numero mayor a 0' });
-    }
-
-    const n = partes.length;
-    const montoBase = Math.floor((montoTotal / n) * 100) / 100;
-    const ajusteFinal = Math.round((montoTotal - montoBase * (n - 1)) * 100) / 100;
-    filasMonto = partes.map((p, i) => ({ sucursal: p.sucursal, monto: i === n - 1 ? ajusteFinal : montoBase }));
-  } else if (modo === 'cantidad') {
-    filasMonto = partes.map((p) => ({ sucursal: p.sucursal, monto: Math.round(Number(p.valor) * 100) / 100 }));
-    if (filasMonto.some((f) => Number.isNaN(f.monto) || f.monto <= 0)) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: 'Cada clinica necesita una cantidad valida mayor a 0' });
-    }
-    montoTotal = Math.round(filasMonto.reduce((s, f) => s + f.monto, 0) * 100) / 100;
-  } else {
-    montoTotal = Number(req.body.monto);
-    if (Number.isNaN(montoTotal) || montoTotal <= 0) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: 'El monto debe ser un numero mayor a 0' });
-    }
-
-    const porcentajes = partes.map((p) => Number(p.valor));
-    if (porcentajes.some((p) => Number.isNaN(p) || p <= 0)) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: 'Cada clinica necesita un porcentaje valido mayor a 0' });
-    }
-    const sumaPct = porcentajes.reduce((s, p) => s + p, 0);
-    if (Math.abs(sumaPct - 100) > 0.5) {
-      borrarComprobante(req.file?.filename);
-      return res.status(400).json({ error: `Los porcentajes deben sumar 100% (suman ${sumaPct.toFixed(1)}%)` });
-    }
-
-    filasMonto = partes.map((p) => ({ sucursal: p.sucursal, monto: Math.round(montoTotal * (Number(p.valor) / 100) * 100) / 100 }));
-    // La ultima fila absorbe el redondeo para que la suma cuadre exacto con el total.
-    const sumaParcial = filasMonto.slice(0, -1).reduce((s, f) => s + f.monto, 0);
-    filasMonto[filasMonto.length - 1].monto = Math.round((montoTotal - sumaParcial) * 100) / 100;
-  }
-
-  const grupoId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const { filas: filasMonto, montoTotal } = division;
+  const grupoId = nuevoGrupoId();
   const insert = db.prepare(
     `INSERT INTO gastos (sucursal, tipo_gasto, concepto, fecha, monto, grupo_id, monto_total, comprobante, marca)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`

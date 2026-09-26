@@ -42,6 +42,15 @@ if (!columnasCuentas.includes('es_fijo')) {
 if (!columnasCuentas.includes('gasto_id')) {
   db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN gasto_id INTEGER');
 }
+// division: JSON { modo, partes: [{ sucursal, valor }] } cuando la cuenta se
+// reparte entre varias clinicas. Al pagarse genera un gasto compartido cuyo
+// grupo_id se guarda en gasto_grupo_id.
+if (!columnasCuentas.includes('division')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN division TEXT');
+}
+if (!columnasCuentas.includes('gasto_grupo_id')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN gasto_grupo_id TEXT');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS gastos (
