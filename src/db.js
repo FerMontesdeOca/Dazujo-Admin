@@ -51,6 +51,11 @@ if (!columnasCuentas.includes('division')) {
 if (!columnasCuentas.includes('gasto_grupo_id')) {
   db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN gasto_grupo_id TEXT');
 }
+// partes_pagadas: JSON con las sucursales de una cuenta dividida que ya
+// pagaron su parte (cada una tiene su gasto dentro del grupo gasto_grupo_id).
+if (!columnasCuentas.includes('partes_pagadas')) {
+  db.exec('ALTER TABLE cuentas_por_pagar ADD COLUMN partes_pagadas TEXT');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS gastos (
