@@ -1,6 +1,8 @@
 const express = require('express');
 const db = require('../db');
 const { revisarVencimientos, revisarAvisosWhatsApp } = require('../cron');
+const { probarWhatsApp } = require('../whatsapp');
+const { requireAdmin } = require('../auth');
 const { enviarCSV, enviarXLSX } = require('../export');
 const { TIPOS_GASTO } = require('../constants');
 const sucursalesDb = require('../sucursales');
@@ -235,6 +237,13 @@ router.put('/:id', (req, res) => {
      WHERE id = ?`
   ).run(proveedor, concepto, fecha_emision, fecha_vencimiento, monto, pagadaNueva, sucursal, tipo_gasto, es_fijo, gastoId, division, grupoId, req.params.id);
 
+  if (fecha_vencimiento !== existente.fecha_vencimiento) {
+    // Nueva fecha de vencimiento: los avisos se vuelven a mandar con respecto a ella.
+    db.prepare(
+      'UPDATE cuentas_por_pagar SET aviso_7_enviado = 0, aviso_3_enviado = 0, aviso_1_enviado = 0, notificada_at = NULL WHERE id = ?'
+    ).run(req.params.id);
+  }
+
   const actualizada = db.prepare('SELECT * FROM cuentas_por_pagar WHERE id = ?').get(req.params.id);
   res.json(conReparto(actualizada));
 });
@@ -245,6 +254,14 @@ router.delete('/:id', (req, res) => {
   if (info.changes === 0) return res.status(404).json({ error: 'No encontrada' });
   if (existente) eliminarGastosDeCuenta(existente.gasto_id, existente.gasto_grupo_id);
   res.status(204).end();
+});
+
+router.post('/probar-whatsapp', requireAdmin, async (req, res) => {
+  try {
+    res.json(await probarWhatsApp());
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Error al probar WhatsApp' });
+  }
 });
 
 router.post('/revisar-vencimientos', async (req, res) => {

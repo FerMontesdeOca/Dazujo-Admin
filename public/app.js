@@ -314,6 +314,35 @@ form.addEventListener('submit', async (e) => {
   cargarCuentas();
 });
 
+async function probarWhatsApp(boton) {
+  if (!confirm('Se enviara un WhatsApp de prueba a los numeros configurados. ¿Continuar?')) return;
+  boton.disabled = true;
+  boton.textContent = 'Enviando...';
+  try {
+    const res = await fetch('/api/cuentas/probar-whatsapp', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Ocurrio un error al probar WhatsApp.');
+    } else if (!data.configurado) {
+      alert(`WhatsApp no esta configurado en el servidor. Faltan estas variables: ${data.faltan.join(', ')}`);
+    } else {
+      const lineas = data.resultados.map((r) =>
+        r.ok ? `✅ ${r.numero}: enviado (${r.estado || 'en cola'})` : `❌ ${r.numero}: ${r.error}${r.codigo ? ` (codigo ${r.codigo})` : ''}`
+      );
+      const plantilla = data.usaPlantilla ? 'Usando plantilla aprobada.' : 'Sin plantilla (TWILIO_WHATSAPP_CONTENT_SID no configurado).';
+      alert(`Resultado de la prueba:\n\n${lineas.join('\n')}\n\n${plantilla}`);
+    }
+  } catch {
+    alert('No se pudo contactar al servidor.');
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Probar WhatsApp';
+  }
+}
+
+const probarWhatsAppBtn = document.getElementById('probar-whatsapp');
+if (probarWhatsAppBtn) probarWhatsAppBtn.addEventListener('click', () => probarWhatsApp(probarWhatsAppBtn));
+
 cancelEditBtn.addEventListener('click', limpiarFormulario);
 filtroPendientes.addEventListener('change', cargarCuentas);
 
