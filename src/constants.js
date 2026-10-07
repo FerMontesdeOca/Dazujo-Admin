@@ -60,7 +60,7 @@ const TIPOS_GASTO = [
 // de un subconjunto fijo de sucursales de Dazujo; Laboratorio no se registra
 // por sucursal (su gasto es unico), por eso usa una sucursal ficticia fija.
 const MARCAS = ['dazujo', 'tomox', 'laboratorio'];
-const TOMOX_SUCURSALES = ['Parras', 'Torreón', 'Ixtlero', 'Flores', 'Centro'];
+const TOMOX_SUCURSALES = ['Parras', 'Torreón', 'Ixtlero', 'Flores', 'Centro', 'Mirasierra'];
 const SUCURSAL_LABORATORIO = 'Laboratorio';
 
 // Meta mensual de ingreso fija por clinica (se aplica igual todos los meses).
